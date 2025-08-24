@@ -7,7 +7,7 @@ from datetime import datetime
 import requests
 from dateutil import tz
 from PyQt5 import QtGui
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QApplication,
     QComboBox,
@@ -74,7 +74,7 @@ LAYOUT_STYLES = """
         font-size: 20px;
         font-style: italic;
     }
-    QPushButton#get_weather_button{
+    QPushButton#update_button{
         font-size: 20px;
         font-weight: bold;
     }
@@ -124,15 +124,22 @@ class WeatherApp(QWidget):
             for i in range(WeatherApp.SYMBOL_CNT)
         ]
         self.error_message = QLabel(self)
-        self.get_weather_button = QPushButton("Päivitä", self)
+        self.update_button = QPushButton("Päivitä", self)
         self.update_time_value = QLabel(self)
         self.settings = utils.load_settings(WeatherApp.SETTINGS_FILE_NAME)
 
         self.init_ui()
         self.init_data()
         self.station_list.currentIndexChanged.connect(self.update_weather)
-        self.get_weather_button.clicked.connect(self.update_weather)
+        self.update_button.clicked.connect(self.update_weather)
         self.apply_settings()
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.timer_func)
+        self.timer.start(600000)  # 5 minutes automnatic update interval
+
+    def timer_func(self):
+        self.update_button.click()
 
     def _cleanup(self):
         self.settings["current_station"] = self.station_list.currentText()
@@ -180,7 +187,7 @@ class WeatherApp(QWidget):
         main_layout.addLayout(weather_symbol_layout)
         main_layout.addLayout(weather_label_layout)
         main_layout.addWidget(self.error_message)
-        main_layout.addWidget(self.get_weather_button)
+        main_layout.addWidget(self.update_button)
         main_layout.addWidget(self.update_time_value)
         self.setLayout(main_layout)
 
@@ -225,7 +232,7 @@ class WeatherApp(QWidget):
         for i in range(WeatherApp.SYMBOL_CNT):
             self.weather_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
         self.error_message.setObjectName("error_message")
-        self.get_weather_button.setObjectName("get_weather_button")
+        self.update_button.setObjectName("update_button")
         self.update_time_value.setObjectName("update_time_value")
 
         # self.station_list.setEditable(True)
