@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QComboBox,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -26,6 +27,7 @@ import weatherutils
 SETTINGS_FILE_NAME = "settings.json"
 TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
 SHORT_TIME_FORMAT = "%d.%m.%Y %H:%M"
+FORECAST_CNT = 3
 
 LAYOUT_STYLES = """
     QLabel, QPushButton{
@@ -77,8 +79,26 @@ LAYOUT_STYLES = """
         font-size: 20px;
         font-style: italic;
     }
+    QLabel#present_weather_symbol_label{
+        font-size: 20px;
+    }
     QLabel#present_weather_symbol{
-        font-size: 100px;
+        font-size: 80px;
+        font-family: Segoe UI emoji;
+    }
+    QLabel#forecast_label{
+        font-size: 20px;
+    }
+    QLabel#forecast_symbol_0{
+        font-size: 80px;
+        font-family: Segoe UI emoji;
+    }
+    QLabel#forecast_symbol_1{
+        font-size: 80px;
+        font-family: Segoe UI emoji;
+    }
+    QLabel#forecast_symbol_2{
+        font-size: 80px;
         font-family: Segoe UI emoji;
     }
     QPushButton#get_weather_button{
@@ -93,13 +113,19 @@ LAYOUT_STYLES = """
 
 class WeatherApp(QWidget):
 
+    def set_taskbar_icon(self):
+        try:
+            # use the application icon also as taskbar icon instead of generic Python process icon:
+            myappid = "63BD6F81-EFE4-444F-8F9F-186984210EA9"  # arbitrary string
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except:
+            # hoping that we end up here if not running on windows...
+            pass
+
     def __init__(self):
         super().__init__()
         QApplication.instance().aboutToQuit.connect(self._cleanup)
-
-        # use the application icon also as taskbar icon instead of generic Python process icon:
-        myappid = "63BD6F81-EFE4-444F-8F9F-186984210EA9"  # arbitrary string
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        self.set_taskbar_icon()
 
         self.station_list_label = QLabel("Havaintoasema:", self)
         self.station_list = QComboBox(self)
@@ -111,13 +137,17 @@ class WeatherApp(QWidget):
         self.avg_wind_value = QLabel(self)
         self.max_wind_label = QLabel("Max. tuuli:", self)
         self.max_wind_value = QLabel(self)
-        self.present_weather_label = QLabel("Säätila:", self)
-        self.present_weather_value = QLabel(self)
         self.visibility_label = QLabel("Näkyvyys:", self)
         self.visibility_value = QLabel(self)
-        self.error_message = QLabel(self)
-
+        self.present_weather_label = QLabel("Säätila:", self)
+        self.present_weather_value = QLabel(self)
+        self.present_weather_symbol_label = QLabel("Nykyinen:", self)
         self.present_weather_symbol = QLabel(self)
+        self.forecast_label = QLabel("Ennuste:", self)
+        self.forecast_symbols = []
+        for i in range(FORECAST_CNT):
+            self.forecast_symbols.append({"label": "", "symbol": QLabel(self)})
+        self.error_message = QLabel(self)
         self.get_weather_button = QPushButton("Päivitä", self)
         self.update_time_value = QLabel(self)
         self.settings = utils.load_settings(SETTINGS_FILE_NAME)
@@ -147,6 +177,7 @@ class WeatherApp(QWidget):
 
         main_layout = QVBoxLayout()
         grid_layout = QGridLayout()
+        forecast_layout = QHBoxLayout()
         grid_layout.addWidget(self.station_list_label, 0, 0)
         grid_layout.addWidget(self.station_list, 0, 1)
         grid_layout.addWidget(self.observation_time_label, 1, 0)
@@ -157,13 +188,18 @@ class WeatherApp(QWidget):
         grid_layout.addWidget(self.avg_wind_value, 3, 1)
         grid_layout.addWidget(self.max_wind_label, 4, 0)
         grid_layout.addWidget(self.max_wind_value, 4, 1)
-        grid_layout.addWidget(self.present_weather_label, 5, 0)
-        grid_layout.addWidget(self.present_weather_value, 5, 1)
-        grid_layout.addWidget(self.visibility_label, 6, 0)
-        grid_layout.addWidget(self.visibility_value, 6, 1)
+        grid_layout.addWidget(self.visibility_label, 5, 0)
+        grid_layout.addWidget(self.visibility_value, 5, 1)
+        grid_layout.addWidget(self.present_weather_label, 6, 0)
+        grid_layout.addWidget(self.present_weather_value, 6, 1)
+        grid_layout.addWidget(self.present_weather_symbol_label, 7, 0)
+        grid_layout.addWidget(self.present_weather_symbol, 7, 1)
+        grid_layout.addWidget(self.forecast_label, 8, 0)
+        for i in range(FORECAST_CNT):
+            forecast_layout.addWidget(self.forecast_symbols[i]["symbol"])
+        grid_layout.addLayout(forecast_layout, 8, 1)
         main_layout.addLayout(grid_layout)
 
-        main_layout.addWidget(self.present_weather_symbol)
         main_layout.addWidget(self.error_message)
         main_layout.addWidget(self.get_weather_button)
         main_layout.addWidget(self.update_time_value)
@@ -182,7 +218,12 @@ class WeatherApp(QWidget):
         self.present_weather_value.setAlignment(Qt.AlignLeft)
         self.visibility_label.setAlignment(Qt.AlignLeft)
         self.visibility_value.setAlignment(Qt.AlignLeft)
-        self.present_weather_symbol.setAlignment(Qt.AlignCenter)
+        self.present_weather_symbol_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.present_weather_symbol.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.forecast_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        for i in range(FORECAST_CNT):
+            self.forecast_symbols[i]["symbol"].setAlignment(Qt.AlignCenter)
+            self.forecast_symbols[i]["symbol"].setWordWrap(True)
         self.error_message.setAlignment(Qt.AlignCenter)
         self.update_time_value.setAlignment(Qt.AlignCenter)
 
@@ -200,7 +241,11 @@ class WeatherApp(QWidget):
         self.present_weather_value.setObjectName("present_weather_value")
         self.visibility_label.setObjectName("visibility_label")
         self.visibility_value.setObjectName("visibility_value")
+        self.present_weather_symbol_label.setObjectName("present_weather_symbol_label")
         self.present_weather_symbol.setObjectName("present_weather_symbol")
+        self.forecast_label.setObjectName("forecast_label")
+        for i in range(FORECAST_CNT):
+            self.forecast_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
         self.error_message.setObjectName("error_message")
         self.get_weather_button.setObjectName("get_weather_button")
         self.update_time_value.setObjectName("update_time_value")
@@ -214,14 +259,11 @@ class WeatherApp(QWidget):
 
     def update_weather(self):
         self.error_message.clear()
-        weather_data = self.get_road_weather().json()
-        forecast = self.get_forecast().json()
-        self.display_road_weather(weather_data, forecast)
+        self.display_road_weather(self.get_data())
 
     def get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
-        Returns a JSON array of stations, or None on error.
-        """
+        Returns a JSON array of stations, or None on error."""
         try:
             response = requests.get(definitions.STATION_LIST_URL)
             response.raise_for_status()
@@ -233,6 +275,12 @@ class WeatherApp(QWidget):
             self.display_error(f"Failed to get station list: {error_json["message"]}")
             return None
 
+    def get_data(self):
+        station_data = self.get_road_weather().json()
+        city_data = self.get_city_weather().json()
+        forecast = self.get_forecast().json()
+        return station_data, city_data, forecast
+
     def get_road_weather(self):
         """Get weather data from Liikennevirasto Open Data API"""
         station_id = self.station_list.currentData()["station_id"]
@@ -243,54 +291,23 @@ class WeatherApp(QWidget):
             return response
         except:
             error_json = json.loads(response.text)
-            self.display_error(f"Weather request failed: {error_json["message"]}")
-            return {}
+            self.display_error(f"Road weather request failed: {error_json["message"]}")
+            return json.loads("{}")
 
-    def get_weather(self):
-        """Get weather data from Open Weathermap API"""
-        city = self.station_list.currentText()
-        if city == None:
-            return None
-        if city.find(",") > -1:
-            city = city.split(",")[0]
+    def get_city_weather(self):
+        """Get weather data from Open Weathermap API.
+        This is needed for the present weather symbol."""
+        city = weatherutils.get_station_city(self.station_list.currentText())
         url = definitions.OPENWEATHERMAP_URL.format(
             city, self.settings["openweathermap_api_key"]
         )
-
         try:
             response = requests.get(url)
             response.raise_for_status()
-            if response.status_code == 200:
-                return response
-        except requests.exceptions.HTTPError as http_error:
-            match response.status_code:
-                case 400:
-                    self.display_error("Bad request:\nPlease check your input")
-                case 401:
-                    self.display_error("Unauthorized:\nInvalid API key")
-                case 403:
-                    self.display_error("Forbidden:\nAccess is denied")
-                case 404:
-                    self.display_error("Not found:\nCity not found")
-                case 500:
-                    self.display_error("Internal Server Error:\nPlease try again later")
-                case 502:
-                    self.display_error("Bad Gateway:\nInvalid response from the server")
-                case 503:
-                    self.display_error("Service Unavailable:\nServer is down")
-                case 504:
-                    self.display_error("Gateway Timeout:\nNo response from the server")
-                case _:
-                    self.display_error(f"HTTP error occurred:\n{http_error}")
-        except requests.exceptions.ConnectionError:
-            self.display_error("Connection Error:\nCheck your internet connection")
-        except requests.exceptions.Timeout:
-            self.display_error("Timeout Error:\nThe request timed out")
-        except requests.exceptions.TooManyRedirects:
-            self.display_error("Too many Redirects:\nCheck the URL")
-        except requests.exceptions.RequestException as req_error:
-            self.display_error(f"Request Error:\n{req_error}")
-        return None
+        except:
+            error_json = json.loads(response.text)
+            self.display_error(f"City weather request failed: {error_json["message"]}")
+        return response
 
     def get_forecast(self):
         """Get weather forecast from Open Weathermap API"""
@@ -304,7 +321,7 @@ class WeatherApp(QWidget):
         if response.status_code != 200:
             error_json = json.loads(response.text)
             self.display_error(f"Forecast request failed: {error_json["message"]}")
-            return {}
+            return json.loads("{}")
         return response
 
     def display_error(self, message):
@@ -367,13 +384,14 @@ class WeatherApp(QWidget):
         )
         return feels_like
 
-    def display_road_weather(self, weather_data, forecast):
+    def display_road_weather(self, data: tuple[any, any, any]):
+        weather_data = data[0]
+        city_data = data[1]
+        forecast = data[2]
+
         # -------------------------------------------------------------------
         # get data from json
-
-        #with open("forecast.json", "w") as f:
-        #    json.dump(forecast, f)
-
+        #
         observation_time_utc = datetime.strptime(
             weather_data["dataUpdatedTime"], "%Y-%m-%dT%H:%M:%SZ"
         ).replace(tzinfo=tz.tzutc())
@@ -393,7 +411,9 @@ class WeatherApp(QWidget):
             weather_data["sensorValues"], "MAKSIMITUULI"
         )
 
-        # weather_id = weather_data["weather"][0]["id"]
+        weather_id = 0
+        if "weather" in city_data:
+            weather_id = city_data["weather"][0]["id"]
 
         present_weather = self.get_present_weather(weather_data["sensorValues"])
         humidity = self.get_raw_sensor_value(
@@ -403,8 +423,13 @@ class WeatherApp(QWidget):
             weather_data["sensorValues"], "NÄKYVYYS_M"
         )
 
+        forecast_ids = [0] * FORECAST_CNT
+        for i in range(FORECAST_CNT):
+            forecast_ids[i] = forecast["list"][i]["weather"][0]["id"]
+
         # -------------------------------------------------------------------
         # update ui components
+        #
         self.observation_time_value.setText(
             observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
         )
@@ -423,7 +448,12 @@ class WeatherApp(QWidget):
             )
         self.max_wind_value.setText(wind_max)
 
-        # self.present_weather_symbol.setText(weatherutils.get_weather_symbol(weather_id))
+        if weather_id > 0:
+            self.present_weather_symbol.setText(
+                weatherutils.get_weather_symbol(weather_id)
+            )
+        else:
+            self.present_weather_symbol.setText("")
 
         if present_weather[1] != "":
             self.present_weather_label.setText(present_weather[0])
@@ -439,6 +469,11 @@ class WeatherApp(QWidget):
             self.visibility_value.setText(f"{math.floor(visibility-visibility%100)} m")
         else:
             self.visibility_value.setText(f"{math.floor(visibility-visibility%10)} m")
+
+        for i in range(FORECAST_CNT):
+            self.forecast_symbols[i]["symbol"].setText(
+                f"{weatherutils.get_weather_symbol(forecast_ids[i])}"
+            )
 
         self.update_time_value.setText(datetime.now().strftime(TIME_FORMAT))
 
@@ -462,6 +497,7 @@ class WeatherApp(QWidget):
                 return sensor
         return None
 
+    @DeprecationWarning
     def display_weather(self, json_data):
         # get data from json
         temperature_c = json_data["main"]["temp"] - 273.15  # convert kelvin to celsius
