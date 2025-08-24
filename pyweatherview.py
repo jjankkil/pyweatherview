@@ -86,10 +86,12 @@ LAYOUT_STYLES = """
 
 class WeatherApp(QWidget):
     SETTINGS_FILE_NAME = "settings.json"
-    TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
-    SHORT_TIME_FORMAT = "%d.%m.%Y %H:%M"
+    SHORT_TIME_FORMAT = "%H:%M"
+    TIME_FORMAT = "%H:%M:%S"
+    DATE_TIME_FORMAT = "%d.%m.%Y %H:%M"
     FORECAST_CNT = 3
     SYMBOL_CNT = FORECAST_CNT + 1
+    STATION_UPDATE_DELAY = 60
 
     def set_taskbar_icon(self):
         try:
@@ -135,8 +137,9 @@ class WeatherApp(QWidget):
         self.apply_settings()
 
         self.timer = QTimer()
+        self.update_interval_s = 60  # initially 1 minute update interval
         self.timer.timeout.connect(self.timer_func)
-        self.timer.start(600000)  # 5 minutes automnatic update interval
+        self.timer.start(self.update_interval_s * 1000)
 
     def timer_func(self):
         self.update_button.click()
@@ -309,7 +312,19 @@ class WeatherApp(QWidget):
             return json.loads("{}")
         return response
 
+    def _clear_ui_components(self):
+        self.observation_time_value.clear()
+        self.temperature_value.clear()
+        self.avg_wind_value.clear()
+        self.max_wind_value.clear()
+        self.visibility_value.clear()
+        self.present_weather_value.clear()
+        for i in range(WeatherApp.SYMBOL_CNT):
+            self.weather_symbols[i]["label"].clear()
+            self.weather_symbols[i]["symbol"].clear()
+
     def display_error(self, message):
+        self._clear_ui_components()
         self.error_message.setText(message)
 
     def display_weather_stations(self, json_data):
@@ -323,6 +338,9 @@ class WeatherApp(QWidget):
                     formatted_name,
                     {
                         "station_id": station["id"],
+                        "station_data_update_time": datetime.now(
+                            tz.tzutc()
+                        ).timestamp(),
                         "city": weatherutils.get_station_city(formatted_name),
                         "location": {
                             "lon": round(station["geometry"]["coordinates"][0], 2),
@@ -381,6 +399,22 @@ class WeatherApp(QWidget):
             weather_data["dataUpdatedTime"], "%Y-%m-%dT%H:%M:%SZ"
         ).replace(tzinfo=tz.tzutc())
 
+        # calculate how long we need to wait until the next update and add some slack
+        previous_observation_time_ts = self.station_list.currentData()[
+            "station_data_update_time"
+        ]
+        waiting_time_s = utils.calculate_seconds_until_next_update(
+            observation_time_utc.timestamp(), previous_observation_time_ts
+        )
+        if waiting_time_s > 0:
+            self.update_interval_s = int(str(f"{waiting_time_s:.0f}"))
+            self.timer.start(
+                (self.update_interval_s + WeatherApp.STATION_UPDATE_DELAY) * 1000
+            )
+        item_data = self.station_list.currentData()
+        item_data["station_data_update_time"] = observation_time_utc.timestamp()
+        self.station_list.setItemData(self.station_list.currentIndex(), item_data)
+
         air_temperature = self.get_formatted_sensor_value(
             weather_data["sensorValues"], "ILMA"
         )
@@ -414,7 +448,9 @@ class WeatherApp(QWidget):
         # get forecast time, temperature and weather_id
         forecasts = [
             [
-                datetime.fromtimestamp(forecast["list"][i]["dt"]).strftime("%H:%M"),
+                datetime.fromtimestamp(forecast["list"][i]["dt"]).strftime(
+                    WeatherApp.SHORT_TIME_FORMAT
+                ),
                 f"{forecast["list"][i]["main"]["temp"] - 273.15:.0f}",
                 forecast["list"][i]["weather"][0]["id"],
             ]
@@ -426,7 +462,7 @@ class WeatherApp(QWidget):
         #
         self.observation_time_value.setText(
             observation_time_utc.astimezone(tz.tzlocal()).strftime(
-                WeatherApp.SHORT_TIME_FORMAT
+                WeatherApp.DATE_TIME_FORMAT
             )
         )
 
@@ -450,7 +486,9 @@ class WeatherApp(QWidget):
         self.max_wind_value.setText(wind_max)
 
         if weather_id > 0:
-            ts = observation_time_utc.astimezone(tz.tzlocal()).strftime("%H:%M")
+            ts = observation_time_utc.astimezone(tz.tzlocal()).strftime(
+                WeatherApp.SHORT_TIME_FORMAT
+            )
             temp = self.get_raw_sensor_value(
                 weather_data["sensorValues"], "ILMA", definitions.ConversionType.TO_INT
             )
