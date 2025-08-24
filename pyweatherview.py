@@ -65,9 +65,11 @@ class WeatherApp(QWidget):
         self.present_weather_symbol = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
-        self.initUI()
 
-    def initUI(self):
+        self.init_ui()
+        self.init_data()
+
+    def init_ui(self):
         self.setWindowTitle("PyWeatherView")
         self.setStyleSheet(LAYOUT_STYLES)
 
@@ -81,7 +83,6 @@ class WeatherApp(QWidget):
         layout.addWidget(self.present_weather_value, 4, 1)
         layout.addWidget(self.present_weather_symbol, 5, 1)
         layout.addWidget(self.get_weather_button, 7, 0)
-
         self.setLayout(layout)
 
         self.temperature_label.setAlignment(Qt.AlignRight)
@@ -102,13 +103,20 @@ class WeatherApp(QWidget):
         self.present_weather_label.setObjectName("present_weather_label")
         self.present_weather_value.setObjectName("present_weather_value")
 
+        # self.station_list.setEditable(True)
+        # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
+        self.station_list.currentIndexChanged.connect(self.update_weather)
+        self.get_weather_button.clicked.connect(self.update_weather)
+
+    def init_data(self):
         station_data = self.get_weather_stations()
         self.display_weather_stations(station_data)
-
-        self.get_weather_button.clicked.connect(self.get_weather)
-        self.station_list.currentIndexChanged.connect(self.get_weather)
-
         self.get_weather()
+
+    def update_weather(self):
+        response = self.get_weather()
+        if response.status_code == 200:
+            self.display_weather(response.json())
 
     def get_weather_stations(self):
         """Get a list containing all weather stations.
@@ -126,6 +134,8 @@ class WeatherApp(QWidget):
 
     def get_weather(self):
         city = self.station_list.currentText()
+        if city == None:
+            return None
         if city.find(",") > -1:
             city = city.split(",")[0]
         url = constants.OPENWEATHERMAP_URL.format(
@@ -135,10 +145,8 @@ class WeatherApp(QWidget):
         try:
             response = requests.get(url)
             response.raise_for_status()
-            # print(response.text)
-            data = response.json()
-            if data["cod"] == 200:
-                self.display_weather(data)
+            if response.status_code == 200:
+                return response
         except requests.exceptions.HTTPError as http_error:
             match response.status_code:
                 case 400:
@@ -167,23 +175,27 @@ class WeatherApp(QWidget):
             self.display_error("Too many Redirects:\nCheck the URL")
         except requests.exceptions.RequestException as req_error:
             self.display_error(f"Request Error:\n{req_error}")
+        return None
 
     def display_error(self, message):
         self.temperature_label.setText("")
         self.temperature_value.setText(message)
 
         self.present_weather_symbol.clear()
-        self.description_label.clear()
+        self.present_weather_label.clear()
+        self.present_weather_value.clear()
 
     def display_weather_stations(self, json_data):
         """Populate the station list UI component from the given JSON array"""
         self.station_list.clear()
         for station in json_data:
-            self.station_list.addItem(
-                weatherutils.format_station_name(
-                    station["properties"]["name"], station["id"]
+            station_name = station["properties"]["name"]
+            if weatherutils.ok_to_add_station(station_name):
+                self.station_list.addItem(
+                    weatherutils.format_station_name(station_name, station["id"]),
+                    station["id"],
                 )
-            )
+        self.station_list.model().sort(0, Qt.SortOrder.AscendingOrder)
 
     def display_weather(self, json_data):
         # get data from json

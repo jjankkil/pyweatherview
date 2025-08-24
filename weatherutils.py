@@ -72,4 +72,16 @@ def format_station_name(raw_name: str, station_id: int):
         formatted_name = f"{tokens[1]}, {tokens[0]}"
     else:
         formatted_name = raw_name
-    return f"{formatted_name}::{station_id}"
+    # return f"{formatted_name}::{station_id}"
+    return formatted_name
+
+
+@staticmethod
+def ok_to_add_station(raw_name: str):
+    station_name_filter_list = ["Test", "LA", "TSA", "TEST", "Meteo", "LAMID"]
+
+    for filter in station_name_filter_list:
+        if raw_name.find(filter) > -1:
+            return False
+
+    return True
