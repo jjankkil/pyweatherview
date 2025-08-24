@@ -1,6 +1,6 @@
-# import sys
+import math
 
-# from PyQt5.QtWidgets import QComboBox
+INVALID_VALUE = -999.0
 
 
 @staticmethod
@@ -72,7 +72,7 @@ def format_station_name(raw_name: str, station_id: int):
         formatted_name = f"{tokens[1]}, {tokens[0]}"
     else:
         formatted_name = raw_name
-    # return f"{formatted_name}::{station_id}"
+
     return formatted_name
 
 
@@ -85,3 +85,59 @@ def ok_to_add_station(raw_name: str):
             return False
 
     return True
+
+
+def _fmi_summer_simmer_index(rh: float, temp: float) -> float:
+    # see https://github.com/fmidev/smartmet-library-newbase/blob/master/newbase/NFmiMetMath.cpp#L418
+
+    simmer_limit = 14.5
+
+    try:
+        # The chart is vertical at this temperature by 0.1 degree accuracy
+        if temp <= simmer_limit:
+            return temp
+
+        # When in Finland and when > 14.5 degrees, 60% is approximately the minimum mean monthly
+        # humidity. However, Google wisdom claims most humans feel most comfortable either at 45%,
+        # or alternatively somewhere between 50-60%. Hence we choose the middle ground 50%.
+        #
+        RH_REF = 50.0 / 100.0
+        r = rh / 100.0
+        result = (
+            1.8 * temp
+            - 0.55 * (1.0 - r) * (1.8 * temp - 26.0)
+            - 0.55 * (1.0 - RH_REF) * 26.0
+        ) / (1.8 * (1.0 - 0.55 * (1.0 - RH_REF)))
+        return result
+
+    except:
+        return INVALID_VALUE
+
+
+def fmi_feels_like_temperature(wind: float, rh: float, temp: float) -> float:
+    # see https://github.com/fmidev/smartmet-library-newbase/blob/master/newbase/NFmiMetMath.cpp#L418
+
+    try:
+        # Calculate adjusted wind chill portion. Note that even though the Canadian formula uses km/h,
+        # we use m/s and have fitted the coefficients accordingly. Note that (a*w)^0.16 = c*w^16,
+        # i.e. just get another coefficient c for the wind reduced to 1.5 meters.
+        #
+        a = 15.0  # using this the two wind chills are good match at T=0
+        t0 = 37.0  # wind chill is horizontal at this T
+        chill = (
+            a
+            + (1.0 - a / t0) * temp
+            + a / t0 * math.pow(wind + 1.0, 0.16) * (temp - t0)
+        )
+
+        # Heat index
+        heat = _fmi_summer_simmer_index(rh, temp)
+        if heat == INVALID_VALUE:
+            return INVALID_VALUE
+
+        # Add the two corrections together
+        feels_like = temp + (chill - temp) + (heat - temp)
+        return feels_like
+
+    except:
+        return INVALID_VALUE

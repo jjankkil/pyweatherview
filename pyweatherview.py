@@ -305,15 +305,32 @@ class WeatherApp(QWidget):
         self,
         sensor_values_json,
         sensor_name,
-        conversion_type=definitions.ConversionType.CONVERT_TO_INT,
+        conversion_type=definitions.ConversionType.TO_INT,
     ):
         sensor = self.find_sensor(sensor_values_json, sensor_name)
         if sensor == None:
             return None
-        if conversion_type == definitions.ConversionType.CONVERT_TO_FLOAT:
+        if conversion_type == definitions.ConversionType.TO_FLOAT:
             return float(str(sensor["value"]))
-        if conversion_type == definitions.ConversionType.CONVERT_TO_INT:
+        if conversion_type == definitions.ConversionType.TO_INT:
             return int(str(sensor["value"]).split(".")[0])
+
+    def _calculate_feels_like_temperature(self, json_data) -> float:
+        wind_speed = self.get_raw_sensor_value(
+            json_data["sensorValues"], "KESKITUULI", definitions.ConversionType.TO_FLOAT
+        )
+        relative_humidity = self.get_raw_sensor_value(
+            json_data["sensorValues"],
+            "ILMAN_KOSTEUS",
+            definitions.ConversionType.TO_FLOAT,
+        )
+        air_temperature = self.get_raw_sensor_value(
+            json_data["sensorValues"], "ILMA", definitions.ConversionType.TO_FLOAT
+        )
+        feels_like = weatherutils.fmi_feels_like_temperature(
+            wind_speed, relative_humidity, air_temperature
+        )
+        return feels_like
 
     def display_road_weather(self, json_data):
         # -------------------------------------------------------------------
@@ -326,7 +343,7 @@ class WeatherApp(QWidget):
         air_temperature = self.get_formatted_sensor_value(
             json_data["sensorValues"], "ILMA"
         )
-        # feels_like_c = json_data["main"]["feels_like"] - 273.15
+        feels_like_temperature = self._calculate_feels_like_temperature(json_data)
 
         wind_avg = self.get_formatted_sensor_value(
             json_data["sensorValues"], "KESKITUULI"
@@ -349,8 +366,9 @@ class WeatherApp(QWidget):
             observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
         )
         self.temperature_label.setText("Lämpötila:")
-        # f"{temperature_c:.1f} °C, tuntuu kuin {feels_like_c:.1f} °C"
-        self.temperature_value.setText(air_temperature)
+        self.temperature_value.setText(
+            f"{air_temperature}, tuntuu kuin {feels_like_temperature:.1f} °C"
+        )
 
         self.avg_wind_value.setText(
             f"{wind_avg}, suunta {wind_deg}° {weatherutils.wind_direction_as_text(float(wind_deg))}"

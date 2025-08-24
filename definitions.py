@@ -13,5 +13,5 @@ WEATHER_STATION_URL = "https://tie.digitraffic.fi/api/weather/v1/stations/{}/dat
 
 
 class ConversionType(Enum):
-    CONVERT_TO_INT = 1
-    CONVERT_TO_FLOAT = 2
+    TO_INT = 1
+    TO_FLOAT = 2
