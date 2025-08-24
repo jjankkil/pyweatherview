@@ -9,12 +9,15 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QLabel,
     QPushButton,
+    QVBoxLayout,
     QWidget,
 )
 
 import constants
 import utils
 import weatherutils
+
+SETTINGS_FILE_NAME = "settings.json"
 
 LAYOUT_STYLES = """
     QLabel, QPushButton{
@@ -56,6 +59,8 @@ class WeatherApp(QWidget):
 
     def __init__(self):
         super().__init__()
+        QApplication.instance().aboutToQuit.connect(self._cleanup)
+
         self.station_list = QComboBox(self)
         self.get_weather_button = QPushButton("Update", self)
         self.temperature_label = QLabel("Lämpötila:", self)
@@ -65,32 +70,50 @@ class WeatherApp(QWidget):
         self.present_weather_symbol = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
+        self.settings = utils.load_settings(SETTINGS_FILE_NAME)
 
         self.init_ui()
         self.init_data()
+        self.apply_settings()
+
+    def _cleanup(self):
+        self.settings["current_station"] = self.station_list.currentText()
+        data = self.settings
+        utils.save_settings(SETTINGS_FILE_NAME, data)
+
+    def apply_settings(self):
+        if len(self.settings.items()) == 0:
+            return
+
+        station_name = self.settings["current_station"]
+        self.station_list.setCurrentText(station_name)
 
     def init_ui(self):
         self.setWindowTitle("PyWeatherView")
         self.setStyleSheet(LAYOUT_STYLES)
 
-        layout = QGridLayout()
-        layout.addWidget(self.station_list, 0, 0)
-        layout.addWidget(self.temperature_label, 2, 0)
-        layout.addWidget(self.temperature_value, 2, 1)
-        layout.addWidget(self.avg_wind_label, 3, 0)
-        layout.addWidget(self.avg_wind_value, 3, 1)
-        layout.addWidget(self.present_weather_label, 4, 0)
-        layout.addWidget(self.present_weather_value, 4, 1)
-        layout.addWidget(self.present_weather_symbol, 5, 1)
-        layout.addWidget(self.get_weather_button, 7, 0)
-        self.setLayout(layout)
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.station_list)
 
-        self.temperature_label.setAlignment(Qt.AlignRight)
+        grid_layout = QGridLayout()
+        grid_layout.addWidget(self.temperature_label, 2, 0)
+        grid_layout.addWidget(self.temperature_value, 2, 1)
+        grid_layout.addWidget(self.avg_wind_label, 3, 0)
+        grid_layout.addWidget(self.avg_wind_value, 3, 1)
+        grid_layout.addWidget(self.present_weather_label, 4, 0)
+        grid_layout.addWidget(self.present_weather_value, 4, 1)
+        grid_layout.addWidget(self.present_weather_symbol, 5, 1)
+        main_layout.addLayout(grid_layout)
+
+        main_layout.addWidget(self.get_weather_button)
+        self.setLayout(main_layout)
+
+        self.temperature_label.setAlignment(Qt.AlignLeft)
         self.temperature_value.setAlignment(Qt.AlignLeft)
-        self.avg_wind_label.setAlignment(Qt.AlignRight)
+        self.avg_wind_label.setAlignment(Qt.AlignLeft)
         self.avg_wind_value.setAlignment(Qt.AlignLeft)
         self.present_weather_symbol.setAlignment(Qt.AlignLeft)
-        self.present_weather_label.setAlignment(Qt.AlignRight)
+        self.present_weather_label.setAlignment(Qt.AlignLeft)
         self.present_weather_value.setAlignment(Qt.AlignLeft)
 
         self.station_list.setObjectName("station_list")
