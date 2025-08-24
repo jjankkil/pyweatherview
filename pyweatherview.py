@@ -105,6 +105,7 @@ class WeatherApp(QWidget):
         QApplication.instance().aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
 
+        self.current_station_id = 0
         self.station_list_label = QLabel("Havaintoasema:", self)
         self.station_list = QComboBox(self)
         self.observation_time_label = QLabel("Havantoaika:", self)
@@ -249,7 +250,21 @@ class WeatherApp(QWidget):
 
     def update_weather(self):
         self.error_message.clear()
-        self.display_road_weather(self.get_data())
+
+        # If the user has changed the station, clear all UI components
+        current_station_id = self.station_list.currentData()["station_id"]
+        if current_station_id != self.current_station_id:
+            self.current_station_id = current_station_id
+            self._clear_ui_components()
+            QApplication.processEvents()
+        
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            self.display_road_weather(self.get_data())
+        except Exception as e:
+            self.display_error(f"Error updating weather: {e}")
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
