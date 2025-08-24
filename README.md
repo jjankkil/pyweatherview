@@ -10,8 +10,8 @@ After startup, the applications polls the API in one minute interval, and when i
 
 The application has so far been developed and run only on Windows 11. On Linux there will probably be problems because of possibly missing Segoe UI emoji font used for the weather symbols.
 
-In order to run the application, Python packages PyQt5, requests need to be installed, e.g.
-```pip install pyqt5, requests```
+In order to run the application, Python packages PyQt5, requests and python-dateutil need to be installed, e.g.
+```pip install pyqt5, requests, python-dateutil```
 
 #### Known issues
 - Waiting period calculation may get confused when a new weather station is selected from the list. This can be solved by clicking the update ("Päivitä") button.
