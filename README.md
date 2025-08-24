@@ -20,5 +20,6 @@ In order to run the application, Python packages PyQt5, requests and python-date
 #### Improvement ideas
 - The application is missing a data model and uses directly JSON objects received from the API. A data model should be created and the who code refactored and modularized accordingly.
 - Weather symbols should be implemented using some other technique that Segoe UI emoji font.
+- Night time weather symbols should be added.
 - Localization; now all texts are hard-coded in Finnish.
 - For easy installation, the application should be packaged.
