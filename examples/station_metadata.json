@@ -1,0 +1,19 @@
+{
+    "type": "Feature",
+    "id": 1001,
+    "geometry": {
+        "type": "Point",
+        "coordinates": [
+            24.596399000000002,
+            60.228226999999997,
+            0.0
+        ]
+    },
+    "properties": {
+        "id": 1001,
+        "name": "vt1_Espoo_Nupuri",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2025-06-17T03:05:33Z"
+    }
+}
