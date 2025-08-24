@@ -20,7 +20,6 @@ from PyQt5.QtWidgets import (
 )
 
 # local modules:
-# import definitions
 from definitions import Constants
 from utils import Utils
 from weatherutils import WeatherUtils
@@ -59,16 +58,19 @@ LAYOUT_STYLES = """
     QLabel#max_wind_value{
         font-size: 20px;
     }
+    QLabel#visibility_label{
+        font-size: 20px;
+    }
+    QLabel#visibility_value{
+        font-size: 20px;
+    }
     QLabel#present_weather_label{
         font-size: 20px;
     }
     QLabel#present_weather_value{
         font-size: 20px;
     }
-    QLabel#visibility_label{
-        font-size: 20px;
-    }
-    QLabel#visibility_value{
+    QLabel#forecast_label{
         font-size: 20px;
     }
     QLabel#error_message{
@@ -117,6 +119,7 @@ class WeatherApp(QWidget):
         self.visibility_value = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
+        self.forecast_label = QLabel("Ennuste paikkakunnalle", self)
         self.weather_symbols = [
             {"label": QLabel(f" \n ", self), "symbol": QLabel(self)}
             for i in range(WeatherApp.SYMBOL_CNT)
@@ -153,7 +156,7 @@ class WeatherApp(QWidget):
         self.station_list.setCurrentText(station_name)
 
     def init_ui(self):
-        self.setWindowTitle("PyWeatherView")
+        self.setWindowTitle("Tiesää")
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
         self.setStyleSheet(LAYOUT_STYLES)
 
@@ -183,6 +186,7 @@ class WeatherApp(QWidget):
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(grid_layout)
+        grid_layout.addWidget(self.forecast_label)
         main_layout.addLayout(weather_symbol_layout)
         main_layout.addLayout(weather_label_layout)
         main_layout.addWidget(self.error_message)
@@ -200,14 +204,15 @@ class WeatherApp(QWidget):
         self.avg_wind_value.setAlignment(Qt.AlignLeft)
         self.max_wind_label.setAlignment(Qt.AlignLeft)
         self.max_wind_value.setAlignment(Qt.AlignLeft)
-        self.present_weather_label.setAlignment(Qt.AlignLeft)
-        self.present_weather_value.setAlignment(Qt.AlignLeft)
         self.visibility_label.setAlignment(Qt.AlignLeft)
         self.visibility_value.setAlignment(Qt.AlignLeft)
+        self.present_weather_label.setAlignment(Qt.AlignLeft)
+        self.present_weather_value.setAlignment(Qt.AlignLeft)
+        self.forecast_label.setAlignment(Qt.AlignCenter)
 
         for i in range(WeatherApp.SYMBOL_CNT):
             self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
-            self.weather_symbols[i]["label"].setAlignment(Qt.AlignLeft)
+            self.weather_symbols[i]["label"].setAlignment(Qt.AlignCenter)
             self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
             self.weather_symbols[i]["symbol"].setAlignment(Qt.AlignCenter)
 
@@ -224,10 +229,11 @@ class WeatherApp(QWidget):
         self.avg_wind_value.setObjectName("avg_wind_value")
         self.max_wind_label.setObjectName("max_wind_label")
         self.max_wind_value.setObjectName("max_wind_value")
-        self.present_weather_label.setObjectName("present_weather_label")
-        self.present_weather_value.setObjectName("present_weather_value")
         self.visibility_label.setObjectName("visibility_label")
         self.visibility_value.setObjectName("visibility_value")
+        self.present_weather_label.setObjectName("present_weather_label")
+        self.present_weather_value.setObjectName("present_weather_value")
+        self.forecast_label.setObjectName("forecast_label")
         for i in range(WeatherApp.SYMBOL_CNT):
             self.weather_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
         self.error_message.setObjectName("error_message")
@@ -511,6 +517,12 @@ class WeatherApp(QWidget):
         else:
             self.visibility_value.setText(f"{math.floor(visibility-visibility%10)} m")
 
+        if "name" in city_data:
+            self.forecast_label.setText(
+                f"\nEnnuste paikkakunnalle {city_data["name"]}:"
+            )
+        else:
+            self.forecast_label.setText("")
         for i in range(WeatherApp.FORECAST_CNT):
             self.weather_symbols[i + 1]["label"].setText(
                 f"{forecasts[i][0]}\n{forecasts[i][1]} °C"
