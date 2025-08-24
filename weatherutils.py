@@ -1,3 +1,5 @@
+import sys
+
 from PyQt5.QtWidgets import QComboBox
 
 
@@ -28,13 +30,6 @@ def get_weather_symbol(weather_id):
 
 
 @staticmethod
-def get_weather_stations(station_list: QComboBox):
-    station_list.addItem("Oulu, Ritaharju VT4")
-    station_list.addItem("Vantaa, Keimola VT3")
-    return station_list.count()
-
-
-@staticmethod
 def wind_direction_as_text(degrees):
     result = ""
 
@@ -59,3 +54,22 @@ def wind_direction_as_text(degrees):
         result = "pohjoisesta"  # "N"
 
     return result
+
+
+@staticmethod
+def format_station_name(raw_name: str, station_id: int):
+    if raw_name == None:
+        return ""
+
+    formatted_name = ""
+    tokens = raw_name.split("_")
+    item_cnt = len(tokens)
+    if item_cnt > 3:
+        formatted_name = f"{tokens[1]}, {tokens[2]} {tokens[0]} {tokens[3]}"
+    elif item_cnt == 3:
+        formatted_name = f"{tokens[1]}, {tokens[2]} {tokens[0]}"
+    elif item_cnt == 2:
+        formatted_name = f"{tokens[1]}, {tokens[0]}"
+    else:
+        formatted_name = raw_name
+    return f"{formatted_name}::{station_id}"

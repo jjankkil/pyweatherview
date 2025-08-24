@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+import constants
 import utils
 import weatherutils
 
@@ -38,7 +39,7 @@ LAYOUT_STYLES = """
     QLabel#avg_wind_value{
         font-size: 20px;
     }
-    QLabel#symbol_label{
+    QLabel#present_weather_symbol{
         font-size: 100px;
         font-family: Segoe UI emoji;
     }
@@ -56,12 +57,12 @@ class WeatherApp(QWidget):
     def __init__(self):
         super().__init__()
         self.station_list = QComboBox(self)
-        self.get_weather_button = QPushButton("Get Weather", self)
+        self.get_weather_button = QPushButton("Update", self)
         self.temperature_label = QLabel("Lämpötila:", self)
         self.temperature_value = QLabel(self)
         self.avg_wind_label = QLabel("Keskituuli:", self)
         self.avg_wind_value = QLabel(self)
-        self.symbol_label = QLabel(self)
+        self.present_weather_symbol = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
         self.initUI()
@@ -72,22 +73,23 @@ class WeatherApp(QWidget):
 
         layout = QGridLayout()
         layout.addWidget(self.station_list, 0, 0)
-        layout.addWidget(self.get_weather_button, 0, 1)
         layout.addWidget(self.temperature_label, 2, 0)
         layout.addWidget(self.temperature_value, 2, 1)
         layout.addWidget(self.avg_wind_label, 3, 0)
         layout.addWidget(self.avg_wind_value, 3, 1)
         layout.addWidget(self.present_weather_label, 4, 0)
         layout.addWidget(self.present_weather_value, 4, 1)
-        layout.addWidget(self.symbol_label, 5, 1)
+        layout.addWidget(self.present_weather_symbol, 5, 1)
+        layout.addWidget(self.get_weather_button, 7, 0)
+
         self.setLayout(layout)
 
-        self.temperature_label.setAlignment(Qt.AlignLeft)
+        self.temperature_label.setAlignment(Qt.AlignRight)
         self.temperature_value.setAlignment(Qt.AlignLeft)
-        self.avg_wind_label.setAlignment(Qt.AlignLeft)
+        self.avg_wind_label.setAlignment(Qt.AlignRight)
         self.avg_wind_value.setAlignment(Qt.AlignLeft)
-        self.symbol_label.setAlignment(Qt.AlignLeft)
-        self.present_weather_label.setAlignment(Qt.AlignLeft)
+        self.present_weather_symbol.setAlignment(Qt.AlignLeft)
+        self.present_weather_label.setAlignment(Qt.AlignRight)
         self.present_weather_value.setAlignment(Qt.AlignLeft)
 
         self.station_list.setObjectName("station_list")
@@ -96,18 +98,38 @@ class WeatherApp(QWidget):
         self.temperature_value.setObjectName("temperature_value")
         self.avg_wind_label.setObjectName("avg_wind_label")
         self.avg_wind_value.setObjectName("avg_wind_value")
-        self.symbol_label.setObjectName("symbol_label")
+        self.present_weather_symbol.setObjectName("present_weather_symbol")
         self.present_weather_label.setObjectName("present_weather_label")
         self.present_weather_value.setObjectName("present_weather_value")
 
-        weatherutils.get_weather_stations(self.station_list)
+        station_data = self.get_weather_stations()
+        self.display_weather_stations(station_data)
+
         self.get_weather_button.clicked.connect(self.get_weather)
+        self.station_list.currentIndexChanged.connect(self.get_weather)
+
+        self.get_weather()
+
+    def get_weather_stations(self):
+        """Get a list containing all weather stations.
+        Returns a JSON array of stations, or None on error.
+        """
+        try:
+            response = requests.get(constants.STATION_LIST_URL)
+            response.raise_for_status()
+            json_data = response.json()
+            return json_data["features"]
+
+        except:
+            self.display_error(response.text)
+            return None
 
     def get_weather(self):
-        api_key = ""  # Replace with your OpenWeatherMap API key
         city = self.station_list.currentText()
-        url = (
-            f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
+        if city.find(",") > -1:
+            city = city.split(",")[0]
+        url = constants.OPENWEATHERMAP_URL.format(
+            city, constants.OPENWEATHERMAP_API_KEY
         )
 
         try:
@@ -150,19 +172,28 @@ class WeatherApp(QWidget):
         self.temperature_label.setText("")
         self.temperature_value.setText(message)
 
-        self.symbol_label.clear()
+        self.present_weather_symbol.clear()
         self.description_label.clear()
 
-    def display_weather(self, data):
-        # get data from json
-        temperature_c = data["main"]["temp"] - 273.15  # convert kelvin to celsius
-        feels_like_c = data["main"]["feels_like"] - 273.15
-        wind_speed = data["wind"]["speed"]
-        wind_deg = data["wind"]["deg"]
+    def display_weather_stations(self, json_data):
+        """Populate the station list UI component from the given JSON array"""
+        self.station_list.clear()
+        for station in json_data:
+            self.station_list.addItem(
+                weatherutils.format_station_name(
+                    station["properties"]["name"], station["id"]
+                )
+            )
 
-        weather_id = data["weather"][0]["id"]
-        present_weather = data["weather"][0]["description"]
-        humidity = data["main"]["humidity"]
+    def display_weather(self, json_data):
+        # get data from json
+        temperature_c = json_data["main"]["temp"] - 273.15  # convert kelvin to celsius
+        feels_like_c = json_data["main"]["feels_like"] - 273.15
+        wind_speed = json_data["wind"]["speed"]
+        wind_deg = json_data["wind"]["deg"]
+        weather_id = json_data["weather"][0]["id"]
+        present_weather = json_data["weather"][0]["description"]
+        humidity = json_data["main"]["humidity"]
 
         # update ui components
         self.temperature_label.setText("Lämpötila:")
@@ -172,7 +203,7 @@ class WeatherApp(QWidget):
         self.avg_wind_value.setText(
             f"{wind_speed:.1f} m/s, suunta {wind_deg}° {weatherutils.wind_direction_as_text(wind_deg)}"
         )
-        self.symbol_label.setText(weatherutils.get_weather_symbol(weather_id))
+        self.present_weather_symbol.setText(weatherutils.get_weather_symbol(weather_id))
         self.present_weather_value.setText(
             f"{present_weather}, suht. kosteus {humidity}%"
         )
