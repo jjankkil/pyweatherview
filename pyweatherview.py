@@ -215,12 +215,11 @@ class WeatherApp(QWidget):
     def update_weather(self):
         self.error_message.clear()
         weather_data = self.get_road_weather().json()
-        # forecast = self.get_forecast()
-        # self.display_road_weather(weather_data, forecast)
-        self.display_road_weather(weather_data)
+        forecast = self.get_forecast().json()
+        self.display_road_weather(weather_data, forecast)
 
     def get_weather_stations(self):
-        """Get a list containing all weather stations.
+        """Get a list containing all weather stations from from Liikennevirasto Open Data API.
         Returns a JSON array of stations, or None on error.
         """
         try:
@@ -235,6 +234,7 @@ class WeatherApp(QWidget):
             return None
 
     def get_road_weather(self):
+        """Get weather data from Liikennevirasto Open Data API"""
         station_id = self.station_list.currentData()["station_id"]
         url = definitions.WEATHER_STATION_URL.format(station_id)
         try:
@@ -247,13 +247,14 @@ class WeatherApp(QWidget):
             return {}
 
     def get_weather(self):
+        """Get weather data from Open Weathermap API"""
         city = self.station_list.currentText()
         if city == None:
             return None
         if city.find(",") > -1:
             city = city.split(",")[0]
         url = definitions.OPENWEATHERMAP_URL.format(
-            city, definitions.OPENWEATHERMAP_API_KEY
+            city, self.settings["openweathermap_api_key"]
         )
 
         try:
@@ -292,11 +293,12 @@ class WeatherApp(QWidget):
         return None
 
     def get_forecast(self):
+        """Get weather forecast from Open Weathermap API"""
         location = self.station_list.currentData()["location"]
         url = definitions.FORERCAST_URL.format(
             location["lat"],
             location["lon"],
-            definitions.OPENWEATHERMAP_API_KEY,
+            self.settings["openweathermap_api_key"],
         )
         response = requests.get(url)
         if response.status_code != 200:
@@ -321,8 +323,8 @@ class WeatherApp(QWidget):
                         "station_id": station["id"],
                         "city": weatherutils.get_station_city(formatted_name),
                         "location": {
-                            "lon": station["geometry"]["coordinates"][0],
-                            "lat": station["geometry"]["coordinates"][1],
+                            "lon": round(station["geometry"]["coordinates"][0], 2),
+                            "lat": round(station["geometry"]["coordinates"][1], 2),
                         },
                     },
                 )
@@ -365,9 +367,12 @@ class WeatherApp(QWidget):
         )
         return feels_like
 
-    def display_road_weather(self, weather_data, forecast=None):
+    def display_road_weather(self, weather_data, forecast):
         # -------------------------------------------------------------------
         # get data from json
+
+        #with open("forecast.json", "w") as f:
+        #    json.dump(forecast, f)
 
         observation_time_utc = datetime.strptime(
             weather_data["dataUpdatedTime"], "%Y-%m-%dT%H:%M:%SZ"

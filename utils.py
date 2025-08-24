@@ -22,6 +22,8 @@ def load_settings(file_name) -> dict:
             file_stats = os.stat(file_name)
             if file_stats.st_size > 0:
                 settings = json.load(f)
+                if "openweathermap_api_key" not in settings:
+                    settings["openweathermap_api_key"] = ""
     except FileNotFoundError:
         print(f"{file_path} not found!")
 
