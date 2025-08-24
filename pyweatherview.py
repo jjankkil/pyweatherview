@@ -210,6 +210,7 @@ class WeatherApp(QWidget):
         self.observation_time_value.setAlignment(Qt.AlignLeft)
         self.temperature_label.setAlignment(Qt.AlignLeft)
         self.temperature_value.setAlignment(Qt.AlignLeft)
+        self.temperature_value.setWordWrap(True)
         self.avg_wind_label.setAlignment(Qt.AlignLeft)
         self.avg_wind_value.setAlignment(Qt.AlignLeft)
         self.max_wind_label.setAlignment(Qt.AlignLeft)
@@ -399,6 +400,9 @@ class WeatherApp(QWidget):
         air_temperature = self.get_formatted_sensor_value(
             weather_data["sensorValues"], "ILMA"
         )
+        air_temperature_change = self.get_formatted_sensor_value(
+            weather_data["sensorValues"], "ILMA_DERIVAATTA"
+        )
         feels_like_temperature = self._calculate_feels_like_temperature(weather_data)
 
         wind_avg = self.get_formatted_sensor_value(
@@ -433,12 +437,17 @@ class WeatherApp(QWidget):
         self.observation_time_value.setText(
             observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
         )
+
+        temperature_str = ""
         if feels_like_temperature == weatherutils.INVALID_VALUE:
-            self.temperature_value.setText(f"{air_temperature}")
+            temperature_str = f"{air_temperature}"
         else:
-            self.temperature_value.setText(
+            temperature_str = (
                 f"{air_temperature}, tuntuu kuin {feels_like_temperature:.1f} °C"
             )
+        if air_temperature_change != "":
+            temperature_str += f",\nmuutos {air_temperature_change}"
+        self.temperature_value.setText(temperature_str)
 
         if wind_avg == "":
             self.avg_wind_value.setText("")
