@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 
 import requests
+from dateutil import tz
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
@@ -13,11 +14,14 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-import constants
+# local modules:
+import definitions
 import utils
 import weatherutils
 
 SETTINGS_FILE_NAME = "settings.json"
+TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
+SHORT_TIME_FORMAT = "%d.%m.%Y %H:%M"
 
 LAYOUT_STYLES = """
     QLabel, QPushButton{
@@ -98,6 +102,8 @@ class WeatherApp(QWidget):
 
         self.init_ui()
         self.init_data()
+        self.station_list.currentIndexChanged.connect(self.update_weather)
+        self.get_weather_button.clicked.connect(self.update_weather)
         self.apply_settings()
 
     def _cleanup(self):
@@ -169,25 +175,26 @@ class WeatherApp(QWidget):
 
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
-        self.station_list.currentIndexChanged.connect(self.update_weather)
-        self.get_weather_button.clicked.connect(self.update_weather)
 
     def init_data(self):
         station_data = self.get_weather_stations()
         self.display_weather_stations(station_data)
-        self.get_weather()
 
     def update_weather(self):
-        response = self.get_weather()
-        if response.status_code == 200:
-            self.display_weather(response.json())
+        json_data = self.get_road_weather().json()
+        self.display_road_weather(json_data)
+
+        # response = self.get_weather()
+        # if response == None or response.status_code != 200:
+        #     return
+        # self.display_weather(response.json())
 
     def get_weather_stations(self):
         """Get a list containing all weather stations.
         Returns a JSON array of stations, or None on error.
         """
         try:
-            response = requests.get(constants.STATION_LIST_URL)
+            response = requests.get(definitions.STATION_LIST_URL)
             response.raise_for_status()
             json_data = response.json()
             return json_data["features"]
@@ -196,14 +203,25 @@ class WeatherApp(QWidget):
             self.display_error(response.text)
             return None
 
+    def get_road_weather(self):
+        station_id = self.station_list.currentData()
+        url = definitions.WEATHER_STATION_URL.format(station_id)
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response
+        except:
+            self.display_error(f"Request failed, status: {response.status_code}")
+            return {}
+
     def get_weather(self):
         city = self.station_list.currentText()
         if city == None:
             return None
         if city.find(",") > -1:
             city = city.split(",")[0]
-        url = constants.OPENWEATHERMAP_URL.format(
-            city, constants.OPENWEATHERMAP_API_KEY
+        url = definitions.OPENWEATHERMAP_URL.format(
+            city, definitions.OPENWEATHERMAP_API_KEY
         )
 
         try:
@@ -260,6 +278,86 @@ class WeatherApp(QWidget):
                     station["id"],
                 )
         self.station_list.model().sort(0, Qt.SortOrder.AscendingOrder)
+
+    def get_formatted_sensor_value(self, sensor_values_json, sensor_name):
+        sensor = self.find_sensor(sensor_values_json, sensor_name)
+        if sensor != None:
+            return f"{sensor["value"]} {sensor["unit"]}"
+        return ""
+
+    def get_raw_sensor_value(
+        self,
+        sensor_values_json,
+        sensor_name,
+        conversion_type=definitions.ConversionType.CONVERT_TO_INT,
+    ):
+        sensor = self.find_sensor(sensor_values_json, sensor_name)
+        if sensor == None:
+            return None
+        if conversion_type == definitions.ConversionType.CONVERT_TO_FLOAT:
+            return float(str(sensor["value"]))
+        if conversion_type == definitions.ConversionType.CONVERT_TO_INT:
+            return int(str(sensor["value"]).split(".")[0])
+
+    def display_road_weather(self, json_data):
+        # get data from json
+        observation_time_utc = datetime.strptime(
+            json_data["dataUpdatedTime"], "%Y-%m-%dT%H:%M:%SZ"
+        ).replace(tzinfo=tz.tzutc())
+
+        temperature_c = self.get_formatted_sensor_value(
+            json_data["sensorValues"], "ILMA"
+        )
+        # feels_like_c = json_data["main"]["feels_like"] - 273.15
+
+        wind_avg = self.get_formatted_sensor_value(
+            json_data["sensorValues"], "KESKITUULI"
+        )
+        wind_deg = self.get_raw_sensor_value(json_data["sensorValues"], "TUULENSUUNTA")
+
+        # weather_id = json_data["weather"][0]["id"]
+
+        present_weather = self.get_present_weather(json_data["sensorValues"])
+        humidity = self.get_raw_sensor_value(json_data["sensorValues"], "ILMAN_KOSTEUS")
+
+        # update ui components
+        self.observation_time_value.setText(
+            observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
+        )
+        self.temperature_label.setText("Lämpötila:")
+        # f"{temperature_c:.1f} °C, tuntuu kuin {feels_like_c:.1f} °C"
+        self.temperature_value.setText(temperature_c)
+
+        self.avg_wind_value.setText(
+            f"{wind_avg}, suunta {wind_deg}° {weatherutils.wind_direction_as_text(float(wind_deg))}"
+        )
+
+        # self.present_weather_symbol.setText(weatherutils.get_weather_symbol(weather_id))
+        self.present_weather_label.setText(present_weather[0])
+        self.present_weather_value.setText(
+            f"{present_weather[1]}, suht. kosteus {humidity}%"
+        )
+
+        self.update_time_value.setText(datetime.now().strftime(TIME_FORMAT))
+
+    def get_present_weather(self, sensor_values_json):
+        pw_label = "Säätila:"
+        pw_text = ""
+
+        sensor = self.find_sensor(sensor_values_json, "SADE")
+        if sensor == None:
+            return
+        if sensor["value"] >= 1.0:
+            pw_label = "Sade:"
+        pw_text = sensor["sensorValueDescriptionFi"]
+
+        return pw_label, pw_text
+
+    def find_sensor(self, sensor_values_json, sensor_name):
+        for sensor in sensor_values_json:
+            if sensor["name"] == sensor_name:
+                return sensor
+        return None
 
     def display_weather(self, json_data):
         # get data from json

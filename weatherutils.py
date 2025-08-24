@@ -1,6 +1,6 @@
-import sys
+# import sys
 
-from PyQt5.QtWidgets import QComboBox
+# from PyQt5.QtWidgets import QComboBox
 
 
 @staticmethod
