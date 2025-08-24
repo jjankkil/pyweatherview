@@ -31,11 +31,13 @@ def get_weather_symbol(weather_id):
 
 @staticmethod
 def wind_direction_as_text(degrees):
-    result = ""
+    if degrees == None:
+        return ""
 
     while degrees > 360:
         degrees -= 360.0
 
+    result = ""
     if (45 - 22.5) <= degrees and degrees < (45 + 22.5):
         result = "koillisesta"  # "NE"
     elif (90 - 22.5) < degrees and degrees < (90 + 22.5):
@@ -57,7 +59,17 @@ def wind_direction_as_text(degrees):
 
 
 @staticmethod
-def format_station_name(raw_name: str, station_id: int):
+def get_station_city(formatted_station_name):
+    if formatted_station_name != None:
+        if formatted_station_name.find(",") > -1:
+            city = formatted_station_name.split(",")[0]
+            return city
+
+    return None
+
+
+@staticmethod
+def format_station_name(raw_name: str):
     if raw_name == None:
         return ""
 
