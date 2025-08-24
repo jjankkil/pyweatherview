@@ -5,87 +5,107 @@ import requests
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
+    QComboBox,
+    QGridLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
-    QVBoxLayout,
     QWidget,
 )
 
+import utils
 import weatherutils
+
+LAYOUT_STYLES = """
+    QLabel, QPushButton{
+        font-family: calibri;
+    }
+    QComboBox#station_list{
+        font-size: 20px;
+    }
+    QPushButton#get_weather_button{
+        font-size: 20px;
+        font-weight: bold;
+    }
+    QLabel#temperature_label{
+        font-size: 20px;
+    }
+    QLabel#temperature_value{
+        font-size: 20px;
+    }
+    QLabel#avg_wind_label{
+        font-size: 20px;
+    }
+    QLabel#avg_wind_value{
+        font-size: 20px;
+    }
+    QLabel#symbol_label{
+        font-size: 100px;
+        font-family: Segoe UI emoji;
+    }
+    QLabel#present_weather_label{
+        font-size: 20px;
+    }
+    QLabel#present_weather_value{
+        font-size: 20px;
+    }
+"""
 
 
 class WeatherApp(QWidget):
+
     def __init__(self):
         super().__init__()
-        self.city_label = QLabel("Enter city name: ", self)
-        self.city_input = QLineEdit(self)
+        self.station_list = QComboBox(self)
         self.get_weather_button = QPushButton("Get Weather", self)
-        self.temperature_label = QLabel(self)  # "20°C"
-        self.symbol_label = QLabel(self)  # "☀"
-        self.description_label = QLabel(self)  # "Pouta"
+        self.temperature_label = QLabel("Lämpötila:", self)
+        self.temperature_value = QLabel(self)
+        self.avg_wind_label = QLabel("Keskituuli:", self)
+        self.avg_wind_value = QLabel(self)
+        self.symbol_label = QLabel(self)
+        self.present_weather_label = QLabel("Säätila:", self)
+        self.present_weather_value = QLabel(self)
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("PyWeatherView")
+        self.setStyleSheet(LAYOUT_STYLES)
 
-        vbox = QVBoxLayout()
-        vbox.addWidget(self.city_label)
-        vbox.addWidget(self.city_input)
-        vbox.addWidget(self.get_weather_button)
-        vbox.addWidget(self.temperature_label)
-        vbox.addWidget(self.symbol_label)
-        vbox.addWidget(self.description_label)
+        layout = QGridLayout()
+        layout.addWidget(self.station_list, 0, 0)
+        layout.addWidget(self.get_weather_button, 0, 1)
+        layout.addWidget(self.temperature_label, 2, 0)
+        layout.addWidget(self.temperature_value, 2, 1)
+        layout.addWidget(self.avg_wind_label, 3, 0)
+        layout.addWidget(self.avg_wind_value, 3, 1)
+        layout.addWidget(self.present_weather_label, 4, 0)
+        layout.addWidget(self.present_weather_value, 4, 1)
+        layout.addWidget(self.symbol_label, 5, 1)
+        self.setLayout(layout)
 
-        self.setLayout(vbox)
+        self.temperature_label.setAlignment(Qt.AlignLeft)
+        self.temperature_value.setAlignment(Qt.AlignLeft)
+        self.avg_wind_label.setAlignment(Qt.AlignLeft)
+        self.avg_wind_value.setAlignment(Qt.AlignLeft)
+        self.symbol_label.setAlignment(Qt.AlignLeft)
+        self.present_weather_label.setAlignment(Qt.AlignLeft)
+        self.present_weather_value.setAlignment(Qt.AlignLeft)
 
-        self.city_label.setAlignment(Qt.AlignCenter)
-        self.city_input.setAlignment(Qt.AlignCenter)
-        self.temperature_label.setAlignment(Qt.AlignCenter)
-        self.symbol_label.setAlignment(Qt.AlignCenter)
-        self.description_label.setAlignment(Qt.AlignCenter)
-
-        self.city_label.setObjectName("city_label")
-        self.city_input.setObjectName("city_input")
+        self.station_list.setObjectName("station_list")
         self.get_weather_button.setObjectName("get_weather_button")
         self.temperature_label.setObjectName("temperature_label")
+        self.temperature_value.setObjectName("temperature_value")
+        self.avg_wind_label.setObjectName("avg_wind_label")
+        self.avg_wind_value.setObjectName("avg_wind_value")
         self.symbol_label.setObjectName("symbol_label")
-        self.description_label.setObjectName("description_label")
+        self.present_weather_label.setObjectName("present_weather_label")
+        self.present_weather_value.setObjectName("present_weather_value")
 
-        self.setStyleSheet(
-            """
-            QLabel, QPushButton{
-                font-family: calibri;
-            }
-            QLabel#city_label{
-                font-size: 40px;
-                font-style: italic;
-            }
-            QLineEdit#city_input{
-                font-size: 40px;
-            }
-            QPushButton#get_weather_button{
-                font-size: 30px;
-                font-weight: bold;
-            }
-            QLabel#temperature_label{
-                font-size: 75px;
-            }
-            QLabel#symbol_label{
-                font-size: 100px;
-                font-family: Segoe UI emoji;
-            }
-            QLabel#description_label{
-                font-size: 50px;
-            }
-        """
-        )
-
+        weatherutils.get_weather_stations(self.station_list)
         self.get_weather_button.clicked.connect(self.get_weather)
 
     def get_weather(self):
         api_key = ""  # Replace with your OpenWeatherMap API key
-        city = self.city_input.text()
+        city = self.station_list.currentText()
         url = (
             f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
         )
@@ -93,6 +113,7 @@ class WeatherApp(QWidget):
         try:
             response = requests.get(url)
             response.raise_for_status()
+            # print(response.text)
             data = response.json()
             if data["cod"] == 200:
                 self.display_weather(data)
@@ -126,28 +147,39 @@ class WeatherApp(QWidget):
             self.display_error(f"Request Error:\n{req_error}")
 
     def display_error(self, message):
-        self.temperature_label.setStyleSheet("font-size: 30px;")
-        self.temperature_label.setText(message)
+        self.temperature_label.setText("")
+        self.temperature_value.setText(message)
+
         self.symbol_label.clear()
         self.description_label.clear()
 
     def display_weather(self, data):
-        self.temperature_label.setStyleSheet("font-size: 75px;")
-        temperature_k = data["main"]["temp"]
-        temperature_c = temperature_k - 273.15
-        # temperature_f = (temperature_k * 9/5) - 459.67
-        weather_id = data["weather"][0]["id"]
-        weather_description = data["weather"][0]["description"]
+        # get data from json
+        temperature_c = data["main"]["temp"] - 273.15  # convert kelvin to celsius
+        feels_like_c = data["main"]["feels_like"] - 273.15
+        wind_speed = data["wind"]["speed"]
+        wind_deg = data["wind"]["deg"]
 
-        self.temperature_label.setText(f"{temperature_c:.1f}°C")
+        weather_id = data["weather"][0]["id"]
+        present_weather = data["weather"][0]["description"]
+        humidity = data["main"]["humidity"]
+
+        # update ui components
+        self.temperature_label.setText("Lämpötila:")
+        self.temperature_value.setText(
+            f"{temperature_c:.1f} °C, tuntuu kuin {feels_like_c:.1f} °C"
+        )
+        self.avg_wind_value.setText(
+            f"{wind_speed:.1f} m/s, suunta {wind_deg}° {weatherutils.wind_direction_as_text(wind_deg)}"
+        )
         self.symbol_label.setText(weatherutils.get_weather_symbol(weather_id))
-        self.description_label.setText(weather_description)
+        self.present_weather_value.setText(
+            f"{present_weather}, suht. kosteus {humidity}%"
+        )
 
 
 if __name__ == "__main__":
-    if not sys.version_info >= (3, 10):
-        print("pyWeatherView requires Python 3.10 or later")
-        print("Technical: Keyword 'match' is supported starting from version 3.10")
+    if not utils.CheckPythonVersion():
         sys.exit()
 
     app = QApplication(sys.argv)
