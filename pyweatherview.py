@@ -63,6 +63,12 @@ LAYOUT_STYLES = """
     QLabel#present_weather_value{
         font-size: 20px;
     }
+    QLabel#visibility_label{
+        font-size: 20px;
+    }
+    QLabel#visibility_value{
+        font-size: 20px;
+    }
     QLabel#present_weather_symbol{
         font-size: 100px;
         font-family: Segoe UI emoji;
@@ -95,6 +101,9 @@ class WeatherApp(QWidget):
         self.max_wind_value = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
+        self.visibility_label = QLabel("Näkyvyys:", self)
+        self.visibility_value = QLabel(self)
+
         self.present_weather_symbol = QLabel(self)
         self.get_weather_button = QPushButton("Päivitä", self)
         self.update_time_value = QLabel(self)
@@ -136,6 +145,8 @@ class WeatherApp(QWidget):
         grid_layout.addWidget(self.max_wind_value, 4, 1)
         grid_layout.addWidget(self.present_weather_label, 5, 0)
         grid_layout.addWidget(self.present_weather_value, 5, 1)
+        grid_layout.addWidget(self.visibility_label, 6, 0)
+        grid_layout.addWidget(self.visibility_value, 6, 1)
         main_layout.addLayout(grid_layout)
 
         main_layout.addWidget(self.present_weather_symbol)
@@ -154,6 +165,8 @@ class WeatherApp(QWidget):
         self.max_wind_value.setAlignment(Qt.AlignLeft)
         self.present_weather_label.setAlignment(Qt.AlignLeft)
         self.present_weather_value.setAlignment(Qt.AlignLeft)
+        self.visibility_label.setAlignment(Qt.AlignLeft)
+        self.visibility_value.setAlignment(Qt.AlignLeft)
         self.present_weather_symbol.setAlignment(Qt.AlignCenter)
         self.update_time_value.setAlignment(Qt.AlignCenter)
 
@@ -169,6 +182,8 @@ class WeatherApp(QWidget):
         self.max_wind_value.setObjectName("max_wind_value")
         self.present_weather_label.setObjectName("present_weather_label")
         self.present_weather_value.setObjectName("present_weather_value")
+        self.visibility_label.setObjectName("visibility_label")
+        self.visibility_value.setObjectName("visibility_value")
         self.present_weather_symbol.setObjectName("present_weather_symbol")
         self.get_weather_button.setObjectName("get_weather_button")
         self.update_time_value.setObjectName("update_time_value")
@@ -184,6 +199,7 @@ class WeatherApp(QWidget):
         json_data = self.get_road_weather().json()
         self.display_road_weather(json_data)
 
+        # Open Weather API temporarily disabled:
         # response = self.get_weather()
         # if response == None or response.status_code != 200:
         #     return
@@ -300,12 +316,14 @@ class WeatherApp(QWidget):
             return int(str(sensor["value"]).split(".")[0])
 
     def display_road_weather(self, json_data):
+        # -------------------------------------------------------------------
         # get data from json
+
         observation_time_utc = datetime.strptime(
             json_data["dataUpdatedTime"], "%Y-%m-%dT%H:%M:%SZ"
         ).replace(tzinfo=tz.tzutc())
 
-        temperature_c = self.get_formatted_sensor_value(
+        air_temperature = self.get_formatted_sensor_value(
             json_data["sensorValues"], "ILMA"
         )
         # feels_like_c = json_data["main"]["feels_like"] - 273.15
@@ -314,29 +332,38 @@ class WeatherApp(QWidget):
             json_data["sensorValues"], "KESKITUULI"
         )
         wind_deg = self.get_raw_sensor_value(json_data["sensorValues"], "TUULENSUUNTA")
+        wind_max = self.get_formatted_sensor_value(
+            json_data["sensorValues"], "MAKSIMITUULI"
+        )
 
         # weather_id = json_data["weather"][0]["id"]
 
         present_weather = self.get_present_weather(json_data["sensorValues"])
         humidity = self.get_raw_sensor_value(json_data["sensorValues"], "ILMAN_KOSTEUS")
+        visibility = self.get_raw_sensor_value(json_data["sensorValues"], "NÄKYVYYS_M")
 
+        # -------------------------------------------------------------------
         # update ui components
+
         self.observation_time_value.setText(
             observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
         )
         self.temperature_label.setText("Lämpötila:")
         # f"{temperature_c:.1f} °C, tuntuu kuin {feels_like_c:.1f} °C"
-        self.temperature_value.setText(temperature_c)
+        self.temperature_value.setText(air_temperature)
 
         self.avg_wind_value.setText(
             f"{wind_avg}, suunta {wind_deg}° {weatherutils.wind_direction_as_text(float(wind_deg))}"
         )
+        self.max_wind_value.setText(wind_max)
 
         # self.present_weather_symbol.setText(weatherutils.get_weather_symbol(weather_id))
         self.present_weather_label.setText(present_weather[0])
         self.present_weather_value.setText(
             f"{present_weather[1]}, suht. kosteus {humidity}%"
         )
+
+        self.visibility_value.setText(f"{visibility} m")
 
         self.update_time_value.setText(datetime.now().strftime(TIME_FORMAT))
 
