@@ -1,5 +1,5 @@
-# import json
 import sys
+from datetime import datetime
 
 import requests
 from PyQt5.QtCore import Qt
@@ -23,12 +23,17 @@ LAYOUT_STYLES = """
     QLabel, QPushButton{
         font-family: calibri;
     }
-    QComboBox#station_list{
+    QLabel#station_list_label{
         font-size: 20px;
     }
-    QPushButton#get_weather_button{
+    QComboBox#station_list{
+        font-size: 17px;
+    }
+    QLabel#observation_time_label{
         font-size: 20px;
-        font-weight: bold;
+    }
+    QLabel#observation_time_value{
+        font-size: 20px;
     }
     QLabel#temperature_label{
         font-size: 20px;
@@ -42,15 +47,28 @@ LAYOUT_STYLES = """
     QLabel#avg_wind_value{
         font-size: 20px;
     }
-    QLabel#present_weather_symbol{
-        font-size: 100px;
-        font-family: Segoe UI emoji;
+    QLabel#max_wind_label{
+        font-size: 20px;
+    }
+    QLabel#max_wind_value{
+        font-size: 20px;
     }
     QLabel#present_weather_label{
         font-size: 20px;
     }
     QLabel#present_weather_value{
         font-size: 20px;
+    }
+    QLabel#present_weather_symbol{
+        font-size: 100px;
+        font-family: Segoe UI emoji;
+    }
+    QPushButton#get_weather_button{
+        font-size: 20px;
+        font-weight: bold;
+    }
+    QLabel#update_time_value{
+        font-size: 15px;
     }
 """
 
@@ -61,15 +79,21 @@ class WeatherApp(QWidget):
         super().__init__()
         QApplication.instance().aboutToQuit.connect(self._cleanup)
 
+        self.station_list_label = QLabel("Havaintoasema:", self)
         self.station_list = QComboBox(self)
-        self.get_weather_button = QPushButton("Update", self)
+        self.observation_time_label = QLabel("Havantoaika:", self)
+        self.observation_time_value = QLabel(self)
         self.temperature_label = QLabel("Lämpötila:", self)
         self.temperature_value = QLabel(self)
         self.avg_wind_label = QLabel("Keskituuli:", self)
         self.avg_wind_value = QLabel(self)
-        self.present_weather_symbol = QLabel(self)
+        self.max_wind_label = QLabel("Max. tuuli:", self)
+        self.max_wind_value = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
+        self.present_weather_symbol = QLabel(self)
+        self.get_weather_button = QPushButton("Päivitä", self)
+        self.update_time_value = QLabel(self)
         self.settings = utils.load_settings(SETTINGS_FILE_NAME)
 
         self.init_ui()
@@ -93,38 +117,55 @@ class WeatherApp(QWidget):
         self.setStyleSheet(LAYOUT_STYLES)
 
         main_layout = QVBoxLayout()
-        main_layout.addWidget(self.station_list)
-
         grid_layout = QGridLayout()
+        grid_layout.addWidget(self.station_list_label, 0, 0)
+        grid_layout.addWidget(self.station_list, 0, 1)
+        grid_layout.addWidget(self.observation_time_label, 1, 0)
+        grid_layout.addWidget(self.observation_time_value, 1, 1)
         grid_layout.addWidget(self.temperature_label, 2, 0)
         grid_layout.addWidget(self.temperature_value, 2, 1)
         grid_layout.addWidget(self.avg_wind_label, 3, 0)
         grid_layout.addWidget(self.avg_wind_value, 3, 1)
-        grid_layout.addWidget(self.present_weather_label, 4, 0)
-        grid_layout.addWidget(self.present_weather_value, 4, 1)
-        grid_layout.addWidget(self.present_weather_symbol, 5, 1)
+        grid_layout.addWidget(self.max_wind_label, 4, 0)
+        grid_layout.addWidget(self.max_wind_value, 4, 1)
+        grid_layout.addWidget(self.present_weather_label, 5, 0)
+        grid_layout.addWidget(self.present_weather_value, 5, 1)
         main_layout.addLayout(grid_layout)
 
+        main_layout.addWidget(self.present_weather_symbol)
         main_layout.addWidget(self.get_weather_button)
+        main_layout.addWidget(self.update_time_value)
         self.setLayout(main_layout)
 
+        self.station_list_label.setAlignment(Qt.AlignLeft)
+        self.observation_time_label.setAlignment(Qt.AlignLeft)
+        self.observation_time_value.setAlignment(Qt.AlignLeft)
         self.temperature_label.setAlignment(Qt.AlignLeft)
         self.temperature_value.setAlignment(Qt.AlignLeft)
         self.avg_wind_label.setAlignment(Qt.AlignLeft)
         self.avg_wind_value.setAlignment(Qt.AlignLeft)
-        self.present_weather_symbol.setAlignment(Qt.AlignLeft)
+        self.max_wind_label.setAlignment(Qt.AlignLeft)
+        self.max_wind_value.setAlignment(Qt.AlignLeft)
         self.present_weather_label.setAlignment(Qt.AlignLeft)
         self.present_weather_value.setAlignment(Qt.AlignLeft)
+        self.present_weather_symbol.setAlignment(Qt.AlignCenter)
+        self.update_time_value.setAlignment(Qt.AlignCenter)
 
+        self.station_list_label.setObjectName("station_list_label")
         self.station_list.setObjectName("station_list")
-        self.get_weather_button.setObjectName("get_weather_button")
+        self.observation_time_label.setObjectName("observation_time_label")
+        self.observation_time_value.setObjectName("observation_time_value")
         self.temperature_label.setObjectName("temperature_label")
         self.temperature_value.setObjectName("temperature_value")
         self.avg_wind_label.setObjectName("avg_wind_label")
         self.avg_wind_value.setObjectName("avg_wind_value")
-        self.present_weather_symbol.setObjectName("present_weather_symbol")
+        self.max_wind_label.setObjectName("max_wind_label")
+        self.max_wind_value.setObjectName("max_wind_value")
         self.present_weather_label.setObjectName("present_weather_label")
         self.present_weather_value.setObjectName("present_weather_value")
+        self.present_weather_symbol.setObjectName("present_weather_symbol")
+        self.get_weather_button.setObjectName("get_weather_button")
+        self.update_time_value.setObjectName("update_time_value")
 
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
@@ -242,6 +283,7 @@ class WeatherApp(QWidget):
         self.present_weather_value.setText(
             f"{present_weather}, suht. kosteus {humidity}%"
         )
+        self.update_time_value.setText(datetime.now().strftime("%d.%m.%Y %H:%M:%S"))
 
 
 if __name__ == "__main__":
