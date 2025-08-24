@@ -24,11 +24,6 @@ import definitions
 import utils
 import weatherutils
 
-SETTINGS_FILE_NAME = "settings.json"
-TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
-SHORT_TIME_FORMAT = "%d.%m.%Y %H:%M"
-FORECAST_CNT = 3
-
 LAYOUT_STYLES = """
     QLabel, QPushButton{
         font-family: calibri;
@@ -79,28 +74,6 @@ LAYOUT_STYLES = """
         font-size: 20px;
         font-style: italic;
     }
-    QLabel#present_weather_symbol_label{
-        font-size: 20px;
-    }
-    QLabel#present_weather_symbol{
-        font-size: 80px;
-        font-family: Segoe UI emoji;
-    }
-    QLabel#forecast_label{
-        font-size: 20px;
-    }
-    QLabel#forecast_symbol_0{
-        font-size: 80px;
-        font-family: Segoe UI emoji;
-    }
-    QLabel#forecast_symbol_1{
-        font-size: 80px;
-        font-family: Segoe UI emoji;
-    }
-    QLabel#forecast_symbol_2{
-        font-size: 80px;
-        font-family: Segoe UI emoji;
-    }
     QPushButton#get_weather_button{
         font-size: 20px;
         font-weight: bold;
@@ -112,6 +85,11 @@ LAYOUT_STYLES = """
 
 
 class WeatherApp(QWidget):
+    SETTINGS_FILE_NAME = "settings.json"
+    TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
+    SHORT_TIME_FORMAT = "%d.%m.%Y %H:%M"
+    FORECAST_CNT = 3
+    SYMBOL_CNT = FORECAST_CNT + 1
 
     def set_taskbar_icon(self):
         try:
@@ -141,16 +119,14 @@ class WeatherApp(QWidget):
         self.visibility_value = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
-        self.present_weather_symbol_label = QLabel("Nykyinen:", self)
-        self.present_weather_symbol = QLabel(self)
-        self.forecast_label = QLabel("Ennuste:", self)
-        self.forecast_symbols = []
-        for i in range(FORECAST_CNT):
-            self.forecast_symbols.append({"label": "", "symbol": QLabel(self)})
+        self.weather_symbols = [
+            {"label": QLabel(f" \n ", self), "symbol": QLabel(self)}
+            for i in range(WeatherApp.SYMBOL_CNT)
+        ]
         self.error_message = QLabel(self)
         self.get_weather_button = QPushButton("Päivitä", self)
         self.update_time_value = QLabel(self)
-        self.settings = utils.load_settings(SETTINGS_FILE_NAME)
+        self.settings = utils.load_settings(WeatherApp.SETTINGS_FILE_NAME)
 
         self.init_ui()
         self.init_data()
@@ -161,7 +137,7 @@ class WeatherApp(QWidget):
     def _cleanup(self):
         self.settings["current_station"] = self.station_list.currentText()
         data = self.settings
-        utils.save_settings(SETTINGS_FILE_NAME, data)
+        utils.save_settings(WeatherApp.SETTINGS_FILE_NAME, data)
 
     def apply_settings(self):
         if len(self.settings.items()) == 0:
@@ -175,9 +151,7 @@ class WeatherApp(QWidget):
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
         self.setStyleSheet(LAYOUT_STYLES)
 
-        main_layout = QVBoxLayout()
         grid_layout = QGridLayout()
-        forecast_layout = QHBoxLayout()
         grid_layout.addWidget(self.station_list_label, 0, 0)
         grid_layout.addWidget(self.station_list, 0, 1)
         grid_layout.addWidget(self.observation_time_label, 1, 0)
@@ -192,14 +166,19 @@ class WeatherApp(QWidget):
         grid_layout.addWidget(self.visibility_value, 5, 1)
         grid_layout.addWidget(self.present_weather_label, 6, 0)
         grid_layout.addWidget(self.present_weather_value, 6, 1)
-        grid_layout.addWidget(self.present_weather_symbol_label, 7, 0)
-        grid_layout.addWidget(self.present_weather_symbol, 7, 1)
-        grid_layout.addWidget(self.forecast_label, 8, 0)
-        for i in range(FORECAST_CNT):
-            forecast_layout.addWidget(self.forecast_symbols[i]["symbol"])
-        grid_layout.addLayout(forecast_layout, 8, 1)
-        main_layout.addLayout(grid_layout)
 
+        weather_symbol_layout = QHBoxLayout()
+        for i in range(WeatherApp.SYMBOL_CNT):
+            weather_symbol_layout.addWidget(self.weather_symbols[i]["symbol"])
+
+        weather_label_layout = QHBoxLayout()
+        for i in range(WeatherApp.SYMBOL_CNT):
+            weather_label_layout.addWidget(self.weather_symbols[i]["label"])
+
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(grid_layout)
+        main_layout.addLayout(weather_symbol_layout)
+        main_layout.addLayout(weather_label_layout)
         main_layout.addWidget(self.error_message)
         main_layout.addWidget(self.get_weather_button)
         main_layout.addWidget(self.update_time_value)
@@ -219,12 +198,13 @@ class WeatherApp(QWidget):
         self.present_weather_value.setAlignment(Qt.AlignLeft)
         self.visibility_label.setAlignment(Qt.AlignLeft)
         self.visibility_value.setAlignment(Qt.AlignLeft)
-        self.present_weather_symbol_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.present_weather_symbol.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.forecast_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        for i in range(FORECAST_CNT):
-            self.forecast_symbols[i]["symbol"].setAlignment(Qt.AlignCenter)
-            self.forecast_symbols[i]["symbol"].setWordWrap(True)
+
+        for i in range(WeatherApp.SYMBOL_CNT):
+            self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
+            self.weather_symbols[i]["label"].setAlignment(Qt.AlignLeft)
+            self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
+            self.weather_symbols[i]["symbol"].setAlignment(Qt.AlignCenter)
+
         self.error_message.setAlignment(Qt.AlignCenter)
         self.update_time_value.setAlignment(Qt.AlignCenter)
 
@@ -242,11 +222,8 @@ class WeatherApp(QWidget):
         self.present_weather_value.setObjectName("present_weather_value")
         self.visibility_label.setObjectName("visibility_label")
         self.visibility_value.setObjectName("visibility_value")
-        self.present_weather_symbol_label.setObjectName("present_weather_symbol_label")
-        self.present_weather_symbol.setObjectName("present_weather_symbol")
-        self.forecast_label.setObjectName("forecast_label")
-        for i in range(FORECAST_CNT):
-            self.forecast_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
+        for i in range(WeatherApp.SYMBOL_CNT):
+            self.weather_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
         self.error_message.setObjectName("error_message")
         self.get_weather_button.setObjectName("get_weather_button")
         self.update_time_value.setObjectName("update_time_value")
@@ -427,15 +404,23 @@ class WeatherApp(QWidget):
             weather_data["sensorValues"], "NÄKYVYYS_M"
         )
 
-        forecast_ids = [0] * FORECAST_CNT
-        for i in range(FORECAST_CNT):
-            forecast_ids[i] = forecast["list"][i]["weather"][0]["id"]
+        # get forecast time, temperature and weather_id
+        forecasts = [
+            [
+                datetime.fromtimestamp(forecast["list"][i]["dt"]).strftime("%H:%M"),
+                f"{forecast["list"][i]["main"]["temp"] - 273.15:.0f}",
+                forecast["list"][i]["weather"][0]["id"],
+            ]
+            for i in range(WeatherApp.FORECAST_CNT)
+        ]
 
         # -------------------------------------------------------------------
         # update ui components
         #
         self.observation_time_value.setText(
-            observation_time_utc.astimezone(tz.tzlocal()).strftime(SHORT_TIME_FORMAT)
+            observation_time_utc.astimezone(tz.tzlocal()).strftime(
+                WeatherApp.SHORT_TIME_FORMAT
+            )
         )
 
         temperature_str = ""
@@ -458,11 +443,17 @@ class WeatherApp(QWidget):
         self.max_wind_value.setText(wind_max)
 
         if weather_id > 0:
-            self.present_weather_symbol.setText(
+            ts = observation_time_utc.astimezone(tz.tzlocal()).strftime("%H:%M")
+            temp = self.get_raw_sensor_value(
+                weather_data["sensorValues"], "ILMA", definitions.ConversionType.TO_INT
+            )
+            self.weather_symbols[0]["label"].setText(f"{ts}\n{temp:.0f} °C")
+            self.weather_symbols[0]["symbol"].setText(
                 weatherutils.get_weather_symbol(weather_id)
             )
         else:
-            self.present_weather_symbol.setText("")
+            self.weather_symbols[0]["label"].setText("")
+            self.weather_symbols[0]["symbol"].setText("")
 
         if present_weather[1] != "":
             self.present_weather_label.setText(present_weather[0])
@@ -479,12 +470,15 @@ class WeatherApp(QWidget):
         else:
             self.visibility_value.setText(f"{math.floor(visibility-visibility%10)} m")
 
-        for i in range(FORECAST_CNT):
-            self.forecast_symbols[i]["symbol"].setText(
-                f"{weatherutils.get_weather_symbol(forecast_ids[i])}"
+        for i in range(WeatherApp.FORECAST_CNT):
+            self.weather_symbols[i + 1]["label"].setText(
+                f"{forecasts[i][0]}\n{forecasts[i][1]} °C"
+            )
+            self.weather_symbols[i + 1]["symbol"].setText(
+                f"{weatherutils.get_weather_symbol(forecasts[i][2])}"
             )
 
-        self.update_time_value.setText(datetime.now().strftime(TIME_FORMAT))
+        self.update_time_value.setText(datetime.now().strftime(WeatherApp.TIME_FORMAT))
 
     def get_present_weather(self, sensor_values_json):
         pw_label = "Säätila:"
@@ -505,31 +499,6 @@ class WeatherApp(QWidget):
             if sensor["name"] == sensor_name:
                 return sensor
         return None
-
-    @DeprecationWarning
-    def display_weather(self, json_data):
-        # get data from json
-        temperature_c = json_data["main"]["temp"] - 273.15  # convert kelvin to celsius
-        feels_like_c = json_data["main"]["feels_like"] - 273.15
-        wind_speed = json_data["wind"]["speed"]
-        wind_deg = json_data["wind"]["deg"]
-        weather_id = json_data["weather"][0]["id"]
-        present_weather = json_data["weather"][0]["description"]
-        humidity = json_data["main"]["humidity"]
-
-        # update ui components
-        self.temperature_label.setText("Lämpötila:")
-        self.temperature_value.setText(
-            f"{temperature_c:.1f} °C, tuntuu kuin {feels_like_c:.1f} °C"
-        )
-        self.avg_wind_value.setText(
-            f"{wind_speed:.1f} m/s, suunta {wind_deg}° {weatherutils.wind_direction_as_text(wind_deg)}"
-        )
-        self.present_weather_symbol.setText(weatherutils.get_weather_symbol(weather_id))
-        self.present_weather_value.setText(
-            f"{present_weather}, suht. kosteus {humidity}%"
-        )
-        self.update_time_value.setText(datetime.now().strftime("%d.%m.%Y %H:%M:%S"))
 
 
 if __name__ == "__main__":
