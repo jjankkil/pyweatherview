@@ -107,8 +107,8 @@ class WeatherApp(QWidget):
         Utils.set_taskbar_icon()
 
         # initialize data model:
-        self._station_list = station_info.WeatherStationList()
-        self._current_station = weather_station.WeatherStation()
+        self._station_list = station_info.WeatherStationList()  # all metadata
+        self._current_station = weather_station.WeatherStation()  # current metadata
         self._latest_stations = []
 
         self.current_station_id = 0
@@ -264,6 +264,11 @@ class WeatherApp(QWidget):
             self._clear_ui_components()
             QApplication.processEvents()
 
+        # data model:
+        self._current_station = self._station_list.find_station_by_id(
+            current_station_id
+        )
+
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             self.display_road_weather(self.get_data())
@@ -281,6 +286,7 @@ class WeatherApp(QWidget):
             response = requests.get(Constants.STATION_LIST_URL)
             response.raise_for_status()
             json_data = response.json()
+            self._station_list.parse(json_data)  # data model
             return json_data["features"]
 
         except:

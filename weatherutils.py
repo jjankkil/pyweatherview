@@ -1,9 +1,24 @@
 import math
+from datetime import datetime
+
+from dateutil import tz
 
 
 class WeatherUtils:
 
     INVALID_VALUE = -999.0
+
+    @staticmethod
+    def timestamp_to_datetime(
+        timestamp_str: str, is_local_time: bool = False
+    ) -> datetime:
+        if is_local_time:
+            return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=tz.tzlocal()
+            )
+        return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=tz.tzutc()
+        )
 
     @staticmethod
     def get_weather_symbol(weather_id):
