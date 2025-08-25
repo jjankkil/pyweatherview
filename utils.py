@@ -40,6 +40,8 @@ class Utils:
                     settings = json.load(f)
                     if "openweathermap_api_key" not in settings:
                         settings["openweathermap_api_key"] = ""
+                    if "latest_stations" not in settings:
+                        settings["latest_stations"] = []
         except FileNotFoundError:
             print(f"{file_path} not found!")
 

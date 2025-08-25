@@ -9,43 +9,96 @@ class DataModel:
 class Sensor:
     INVALID_VALUE = -999
 
+    class SensorType(Enum):
+        NOT_DEFINED = 0
+        TEMPERATURE = 1
+        WIND = 2
+
+    class SensorStatus(Enum):
+        MISSING = -1
+        OK = 0
+        NOT_OK = 1
+
+    __instance_counter = 0
+
     def __init__(self):
-        self.type = "r"
-        self.unit = ""
+        Sensor.__instance_counter += 1
+        self._id = Sensor.__instance_counter
+        self._station_id = 0
+        self._sensor_type = Sensor.SensorType.NOT_DEFINED
+        self._sensor_status = Sensor.SensorStatus.OK
+
+        self._name = ""
+        self._short_name = ""
+        self._value_description = "puuttuu"
+
+        self._value = 0.0
+        self._unit = ""
+        self.text = ""
         self.update_interval_s = 300
         self.data_updated = datetime(1970, 1, 1, 0, 0, 0)
+
+    @property
+    def sensor_type(self) -> SensorType:
+        return self._sensor_type
+
+    @property
+    def unit(self) -> str:
+        return self._unit
 
 
 class AirTemperatureSensor(Sensor):
     def __init__(self):
         super().__init__()
-        self.type = "AirTemperatureSensor"
-        self.unit = "°C"
-        self.temperature = float(Sensor.INVALID_VALUE)
+        self._sensor_type = Sensor.SensorType.TEMPERATURE
+        self._unit = "°C"
+        self._temperature = float(Sensor.INVALID_VALUE)
         self._temperature_change = float(Sensor.INVALID_VALUE)
         self._temperature_feels_like = float(Sensor.INVALID_VALUE)
+        self._temperature_change_unit = "°C/h"
 
     @property
-    def Temperature(self):
+    def temperature(self) -> float:
         return self._temperature
 
+    @temperature.setter
+    def temperature(self, value):
+        self.temperature = value
+        self.text = f"{str(self.temperature)} {self.unit}"
+
     @property
-    def TemperatureChange(self):
+    def temperature_change(self) -> float:
         return self._temperature_change
 
     @property
-    def TemperatureFeelsLike(self):
+    def temperature_change_unit(self) -> str:
+        return self._temperature_change_unit
+
+    @property
+    def temperature_feels_like(self) -> float:
         return self._temperature_feels_like
 
 
 class WindSensor(Sensor):
     def __init__(self):
         super().__init__()
-        self.type = "WindSensor"
-        self.unit = "m/s"
+        self._sensor_type = Sensor.SensorType.WIND
+        self._unit = "m/s"
         self._wind_speed = float(Sensor.INVALID_VALUE)
-        self._wind_direction = float(Sensor.INVALID_VALUE)
+        self._wind_direction = int(Sensor.INVALID_VALUE)
         self._wind_direction_text = ""
+
+    @property
+    def speed(self) -> float:
+        return self._wind_speed
+
+    @property
+    def direction(self) -> int:
+        return self._wind_direction
+
+    @property
+    def direction_text(self) -> str:
+        return self._wind_direction_text
 
 
 class WeatherStation:
@@ -56,15 +109,20 @@ class WeatherStation:
     def __init__(self):
         self._station_id = 0
         self._station_name = ""
-        self._observation_time = [datetime(1970, 1, 1, 0, 0, 0)] * 2
+        self._data_updated_time = [datetime(1970, 1, 1, 0, 0, 0)] * 2
 
         self.sensors = []
         self.sensors.append(AirTemperatureSensor())
         self.sensors.append(WindSensor())
 
     @property
-    def ObservationTime(self, idx: ObservationTimeIdx = ObservationTimeIdx.LATEST):
-        if id > WeatherStation.ObservationTimeIdx.LATEST:
-            return {}
+    def data_updated_time(
+        self, idx: ObservationTimeIdx = ObservationTimeIdx.LATEST
+    ) -> datetime:
+        if idx.value > WeatherStation.ObservationTimeIdx.LATEST.value:
+            return datetime(1970, 1, 1, 0, 0, 0)
         else:
-            return self._observation_time[idx]
+            return self._data_updated_time[idx.value]
+
+    def Parse(self, metadata_json) -> bool:
+        return True

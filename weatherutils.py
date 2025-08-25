@@ -69,7 +69,12 @@ class WeatherUtils:
 
     @staticmethod
     def format_station_name(raw_name: str):
-        if raw_name == None:
+        """Get formatted station name
+
+        Reformats Properties.Name.FI so that city name is in the beginning.
+        Example: "vt1_Espoo_Nupuri" --> "Espoo, Nupuri vt1"
+        """
+        if raw_name == None or raw_name == "":
             return ""
 
         formatted_name = ""

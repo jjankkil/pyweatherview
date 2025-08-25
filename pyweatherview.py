@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import (
 
 # local modules:
 from definitions import Constants
+from model import station_info, weather_station
 from utils import Utils
 from weatherutils import WeatherUtils
 
@@ -104,6 +105,11 @@ class WeatherApp(QWidget):
         super().__init__()
         QApplication.instance().aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
+
+        # initialize data model:
+        self._station_list = station_info.WeatherStationList()
+        self._current_station = weather_station.WeatherStation()
+        self._latest_stations = []
 
         self.current_station_id = 0
         self.station_list_label = QLabel("Havaintoasema:", self)
