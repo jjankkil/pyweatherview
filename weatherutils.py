@@ -141,6 +141,13 @@ class WeatherUtils:
     def fmi_feels_like_temperature(wind: float, rh: float, temp: float) -> float:
         # see https://github.com/fmidev/smartmet-library-newbase/blob/master/newbase/NFmiMetMath.cpp#L418
 
+        if (
+            wind == WeatherUtils.INVALID_VALUE
+            or rh == WeatherUtils.INVALID_VALUE
+            or temp == WeatherUtils.INVALID_VALUE
+        ):
+            return WeatherUtils.INVALID_VALUE
+
         try:
             # Calculate adjusted wind chill portion. Note that even though the Canadian formula uses km/h,
             # we use m/s and have fitted the coefficients accordingly. Note that (a*w)^0.16 = c*w^16,

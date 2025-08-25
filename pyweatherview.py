@@ -257,7 +257,7 @@ class WeatherApp(QWidget):
             self.current_station_id = current_station_id
             self._clear_ui_components()
             QApplication.processEvents()
-        
+
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
             self.display_road_weather(self.get_data())
@@ -269,6 +269,8 @@ class WeatherApp(QWidget):
     def get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
         Returns a JSON array of stations, or None on error."""
+
+        response = requests.Response()  # get rid of pylint warning
         try:
             response = requests.get(Constants.STATION_LIST_URL)
             response.raise_for_status()
@@ -288,8 +290,10 @@ class WeatherApp(QWidget):
 
     def get_road_weather(self):
         """Get weather data from Liikennevirasto Open Data API"""
+
         station_id = self.station_list.currentData()["station_id"]
         url = Constants.WEATHER_STATION_URL.format(station_id)
+        response = requests.Response()
         try:
             response = requests.get(url)
             response.raise_for_status()
@@ -302,13 +306,23 @@ class WeatherApp(QWidget):
     def get_city_weather(self):
         """Get weather data from Open Weathermap API.
         This is needed for the present weather symbol."""
+
         city = WeatherUtils.get_station_city(self.station_list.currentText())
         url = Constants.OPENWEATHERMAP_URL.format(
             city, self.settings["openweathermap_api_key"]
         )
+        response = requests.Response()
         try:
             response = requests.get(url)
-            response.raise_for_status()
+            if response.status_code == 404:
+                location = self.station_list.currentData()["location"]
+                url = Constants.OPENWEATHERMAP_LOCATION_URL.format(
+                    location["lat"],
+                    location["lon"],
+                    self.settings["openweathermap_api_key"],
+                )
+                response = requests.get(url)
+                response.raise_for_status()
         except:
             error_json = json.loads(response.text)
             self.display_error(f"City weather request failed: {error_json["message"]}")
@@ -336,6 +350,7 @@ class WeatherApp(QWidget):
         self.max_wind_value.clear()
         self.visibility_value.clear()
         self.present_weather_value.clear()
+        self.forecast_label.clear()
         for i in range(WeatherApp.SYMBOL_CNT):
             self.weather_symbols[i]["label"].clear()
             self.weather_symbols[i]["symbol"].clear()
@@ -381,7 +396,7 @@ class WeatherApp(QWidget):
     ):
         sensor = self.find_sensor(sensor_values_json, sensor_name)
         if sensor == None:
-            return None
+            return WeatherUtils.INVALID_VALUE
         if conversion_type == WeatherApp.ConversionType.TO_FLOAT:
             return float(str(sensor["value"]))
         if conversion_type == WeatherApp.ConversionType.TO_INT:
@@ -523,7 +538,7 @@ class WeatherApp(QWidget):
                 f"{present_weather[1]}, suht. kosteus {humidity}%"
             )
 
-        if visibility == None:
+        if visibility == None or visibility < 0:
             self.visibility_value.setText("")
         elif visibility >= 1000:
             self.visibility_value.setText(f"{math.floor(visibility/1000)} km")
