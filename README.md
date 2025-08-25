@@ -1,6 +1,6 @@
 # pyweatherview
 
-Desktop GUI application, which lets the user select a weather station from the list of Finnish road weather stations, and displays the latest data from the selected station, as well as symbols for the current weather and 3-hour forecasts for the next 12 hours.
+Desktop GUI application, which lets the user select a weather station from the list of Finnish road weather stations, and displays the latest data from the selected station, as well as symbols for the current weather and three 3-hour forecasts.
 
 <img alt="Screen shot" src="./screen_shot.png" />
 
