@@ -1,9 +1,10 @@
 from datetime import datetime
 from enum import Enum
 
+from utils import Utils
+from weatherutils import WeatherUtils
 
-class DataModel:
-    VERSION_STR = "0.1.0"
+from . import station_info
 
 
 class Sensor:
@@ -19,24 +20,41 @@ class Sensor:
         OK = 0
         NOT_OK = 1
 
-    __instance_counter = 0
-
     def __init__(self):
-        Sensor.__instance_counter += 1
-        self._id = Sensor.__instance_counter
+        # properties copied from WeatherView application:
+        self._id = 0
         self._station_id = 0
-        self._sensor_type = Sensor.SensorType.NOT_DEFINED
-        self._sensor_status = Sensor.SensorStatus.OK
-
         self._name = ""
         self._short_name = ""
-        self._value_description = "puuttuu"
-
+        self._measured_time = datetime(1970, 1, 1, 0, 0, 0)
         self._value = 0.0
         self._unit = ""
-        self.text = ""
-        self.update_interval_s = 300
-        self.data_updated = datetime(1970, 1, 1, 0, 0, 0)
+        self._sensor_value_description = ""  # used for present weather
+        self._sensor_status = Sensor.SensorStatus.OK
+
+        # new properties, may be dropped:
+        self._sensor_type = Sensor.SensorType.NOT_DEFINED
+
+    def parse(self, sensor_json) -> bool:
+        try:
+            self._id = sensor_json["id"]
+            self._station_id = sensor_json["stationId"]
+            self._name = sensor_json["name"]
+            self._short_name = sensor_json["shortName"]
+            self._measured_time = WeatherUtils.timestamp_to_datetime(
+                sensor_json["measuredTime"]
+            )
+            self._value = sensor_json["value"]
+            if not sensor_json["unit"] in WeatherUtils.MISSING_UNIT:
+                self._unit = sensor_json["unit"]
+            if "sensorValueDescriptionFi" in sensor_json:
+                self._sensor_value_description = sensor_json["sensorValueDescriptionFI"]
+            return True
+
+        except:
+            pass  # todo: add error handling
+
+        return False
 
     @property
     def sensor_type(self) -> SensorType:
@@ -47,7 +65,7 @@ class Sensor:
         return self._unit
 
 
-class AirTemperatureSensor(Sensor):
+class AirTemperature(Sensor):
     def __init__(self):
         super().__init__()
         self._sensor_type = Sensor.SensorType.TEMPERATURE
@@ -79,7 +97,7 @@ class AirTemperatureSensor(Sensor):
         return self._temperature_feels_like
 
 
-class WindSensor(Sensor):
+class Wind(Sensor):
     def __init__(self):
         super().__init__()
         self._sensor_type = Sensor.SensorType.WIND
@@ -107,13 +125,9 @@ class WeatherStation:
         PREVIOUS = 1
 
     def __init__(self):
-        self._station_id = 0
-        self._station_name = ""
+        self._station_info = station_info.WeatherStationInfo()
         self._data_updated_time = [datetime(1970, 1, 1, 0, 0, 0)] * 2
-
-        self.sensors = []
-        self.sensors.append(AirTemperatureSensor())
-        self.sensors.append(WindSensor())
+        self.sensor_values = []
 
     @property
     def data_updated_time(
@@ -124,5 +138,38 @@ class WeatherStation:
         else:
             return self._data_updated_time[idx.value]
 
-    def Parse(self, metadata_json) -> bool:
+    @property
+    def seconds_until_next_update(self):
+        return Utils.calculate_seconds_until_next_update(
+            self._data_updated_time[
+                WeatherStation.ObservationTimeIdx.LATEST.value
+            ].timestamp(),
+            self._data_updated_time[
+                WeatherStation.ObservationTimeIdx.PREVIOUS.value
+            ].timestamp(),
+        )
+
+    def parse(self, weather_data) -> bool:
+        # update 'data updated' times
+        observation_time = WeatherUtils.timestamp_to_datetime(
+            weather_data["dataUpdatedTime"]
+        )
+        if (
+            observation_time
+            != self._data_updated_time[WeatherStation.ObservationTimeIdx.PREVIOUS.value]
+        ):
+            self._data_updated_time[
+                WeatherStation.ObservationTimeIdx.PREVIOUS.value
+            ] = self._data_updated_time[WeatherStation.ObservationTimeIdx.LATEST.value]
+            self._data_updated_time[WeatherStation.ObservationTimeIdx.LATEST.value] = (
+                observation_time
+            )
+
+        # get sensor values
+        self.sensor_values.clear()
+        for sensor_json in weather_data["sensorValues"]:
+            sensor_value = Sensor()
+            if sensor_value.parse(sensor_json):
+                self.sensor_values.append(sensor_value)
+
         return True

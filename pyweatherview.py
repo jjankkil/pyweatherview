@@ -2,7 +2,6 @@ import json
 import math
 import sys
 from datetime import datetime
-from enum import Enum
 
 import requests
 from dateutil import tz
@@ -20,10 +19,10 @@ from PyQt5.QtWidgets import (
 )
 
 # local modules:
-from definitions import Constants
+from definitions import Constants, Formats, Urls
 from model import station_info, weather_station
 from utils import Utils
-from weatherutils import WeatherUtils
+from weatherutils import ConversionType, WeatherUtils
 
 LAYOUT_STYLES = """
     QLabel, QPushButton{
@@ -89,18 +88,6 @@ LAYOUT_STYLES = """
 
 
 class WeatherApp(QWidget):
-    SETTINGS_FILE_NAME = "settings.json"
-    SHORT_TIME_FORMAT = "%H:%M"
-    TIME_FORMAT = "%H:%M:%S"
-    DATE_TIME_FORMAT = "%d.%m.%Y %H:%M"
-    FORECAST_CNT = 3
-    SYMBOL_CNT = FORECAST_CNT + 1
-    STATION_UPDATE_DELAY = 60
-
-    class ConversionType(Enum):
-        TO_INT = 1
-        TO_FLOAT = 2
-
     def __init__(self):
         super().__init__()
         instance = QApplication.instance()
@@ -109,8 +96,8 @@ class WeatherApp(QWidget):
         Utils.set_taskbar_icon()
 
         # initialize data model:
-        self._station_list = station_info.WeatherStationList()  # all metadata
-        self._current_station = weather_station.WeatherStation()  # current metadata
+        self._station_list = station_info.WeatherStationList()  # all stations
+        self._current_station = weather_station.WeatherStation()  # selected station
         self._latest_stations = []
 
         self.current_station_id = 0
@@ -131,12 +118,12 @@ class WeatherApp(QWidget):
         self.forecast_label = QLabel("Ennuste paikkakunnalle", self)
         self.weather_symbols = [
             {"label": QLabel(f" \n ", self), "symbol": QLabel(self)}
-            for i in range(WeatherApp.SYMBOL_CNT)
+            for i in range(Constants.SYMBOL_CNT)
         ]
         self.error_message = QLabel(self)
         self.update_button = QPushButton("Päivitä", self)
         self.update_time_value = QLabel(self)
-        self.settings = Utils.load_settings(WeatherApp.SETTINGS_FILE_NAME)
+        self.settings = Utils.load_settings(Constants.SETTINGS_FILE_NAME)
 
         self.init_ui()
         self.init_data()
@@ -155,7 +142,7 @@ class WeatherApp(QWidget):
     def _cleanup(self):
         self.settings["current_station"] = self.station_list.currentText()
         data = self.settings
-        Utils.save_settings(WeatherApp.SETTINGS_FILE_NAME, data)
+        Utils.save_settings(Constants.SETTINGS_FILE_NAME, data)
 
     def apply_settings(self):
         if len(self.settings.items()) == 0:
@@ -186,11 +173,11 @@ class WeatherApp(QWidget):
         grid_layout.addWidget(self.present_weather_value, 6, 1)
 
         weather_symbol_layout = QHBoxLayout()
-        for i in range(WeatherApp.SYMBOL_CNT):
+        for i in range(Constants.SYMBOL_CNT):
             weather_symbol_layout.addWidget(self.weather_symbols[i]["symbol"])
 
         weather_label_layout = QHBoxLayout()
-        for i in range(WeatherApp.SYMBOL_CNT):
+        for i in range(Constants.SYMBOL_CNT):
             weather_label_layout.addWidget(self.weather_symbols[i]["label"])
 
         main_layout = QVBoxLayout()
@@ -221,7 +208,7 @@ class WeatherApp(QWidget):
         self.present_weather_value.setAlignment(AlignLeft)
         self.forecast_label.setAlignment(AlignCenter)
 
-        for i in range(WeatherApp.SYMBOL_CNT):
+        for i in range(Constants.SYMBOL_CNT):
             self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
             self.weather_symbols[i]["label"].setAlignment(AlignCenter)
             self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
@@ -245,7 +232,7 @@ class WeatherApp(QWidget):
         self.present_weather_label.setObjectName("present_weather_label")
         self.present_weather_value.setObjectName("present_weather_value")
         self.forecast_label.setObjectName("forecast_label")
-        for i in range(WeatherApp.SYMBOL_CNT):
+        for i in range(Constants.SYMBOL_CNT):
             self.weather_symbols[i]["symbol"].setObjectName(f"forecast_symbol_{i}")
         self.error_message.setObjectName("error_message")
         self.update_button.setObjectName("update_button")
@@ -269,7 +256,7 @@ class WeatherApp(QWidget):
             QApplication.processEvents()
 
         # data model:
-        self._current_station = self._station_list.find_station_by_id(
+        self._current_station._station_info = self._station_list.find_station_by_id(
             current_station_id
         )
 
@@ -288,7 +275,7 @@ class WeatherApp(QWidget):
 
         response = requests.Response()  # get rid of pylint warning
         try:
-            response = requests.get(Constants.STATION_LIST_URL)
+            response = requests.get(Urls.STATION_LIST_URL)
             response.raise_for_status()
             json_data = response.json()
             self._station_list.parse(json_data)  # data model
@@ -309,11 +296,12 @@ class WeatherApp(QWidget):
         """Get weather data from Liikennevirasto Open Data API"""
 
         station_id = self.station_list.currentData()["station_id"]
-        url = Constants.WEATHER_STATION_URL.format(station_id)
+        url = Urls.WEATHER_STATION_URL.format(station_id)
         response = requests.Response()
         try:
             response = requests.get(url)
             response.raise_for_status()
+            self._current_station.parse(response.json())
             return response
         except:
             error_json = json.loads(response.text)
@@ -325,7 +313,7 @@ class WeatherApp(QWidget):
         This is needed for the present weather symbol."""
 
         city = WeatherUtils.get_station_city(self.station_list.currentText())
-        url = Constants.OPENWEATHERMAP_URL.format(
+        url = Urls.OPENWEATHERMAP_URL.format(
             city, self.settings["openweathermap_api_key"]
         )
         response = requests.Response()
@@ -333,7 +321,7 @@ class WeatherApp(QWidget):
             response = requests.get(url)
             if response.status_code == 404:
                 location = self.station_list.currentData()["location"]
-                url = Constants.OPENWEATHERMAP_LOCATION_URL.format(
+                url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
                     location["lat"],
                     location["lon"],
                     self.settings["openweathermap_api_key"],
@@ -348,7 +336,7 @@ class WeatherApp(QWidget):
     def get_forecast(self):
         """Get weather forecast from Open Weathermap API"""
         location = self.station_list.currentData()["location"]
-        url = Constants.FORERCAST_URL.format(
+        url = Urls.FORERCAST_URL.format(
             location["lat"],
             location["lon"],
             self.settings["openweathermap_api_key"],
@@ -368,7 +356,7 @@ class WeatherApp(QWidget):
         self.visibility_value.clear()
         self.present_weather_value.clear()
         self.forecast_label.clear()
-        for i in range(WeatherApp.SYMBOL_CNT):
+        for i in range(Constants.SYMBOL_CNT):
             self.weather_symbols[i]["label"].clear()
             self.weather_symbols[i]["symbol"].clear()
 
@@ -416,22 +404,22 @@ class WeatherApp(QWidget):
         sensor = self.find_sensor(sensor_values_json, sensor_name)
         if sensor == None:
             return WeatherUtils.INVALID_VALUE
-        if conversion_type == WeatherApp.ConversionType.TO_FLOAT:
+        if conversion_type == ConversionType.TO_FLOAT:
             return float(str(sensor["value"]))
-        if conversion_type == WeatherApp.ConversionType.TO_INT:
+        if conversion_type == ConversionType.TO_INT:
             return int(str(sensor["value"]).split(".")[0])
 
     def _calculate_feels_like_temperature(self, json_data) -> float:
         wind_speed = self.get_raw_sensor_value(
-            json_data["sensorValues"], "KESKITUULI", WeatherApp.ConversionType.TO_FLOAT
+            json_data["sensorValues"], "KESKITUULI", ConversionType.TO_FLOAT
         )
         relative_humidity = self.get_raw_sensor_value(
             json_data["sensorValues"],
             "ILMAN_KOSTEUS",
-            WeatherApp.ConversionType.TO_FLOAT,
+            ConversionType.TO_FLOAT,
         )
         air_temperature = self.get_raw_sensor_value(
-            json_data["sensorValues"], "ILMA", WeatherApp.ConversionType.TO_FLOAT
+            json_data["sensorValues"], "ILMA", ConversionType.TO_FLOAT
         )
         feels_like = WeatherUtils.fmi_feels_like_temperature(
             wind_speed, relative_humidity, air_temperature
@@ -456,7 +444,7 @@ class WeatherApp(QWidget):
         if waiting_time_s > 0:
             self.update_interval_s = int(str(f"{waiting_time_s:.0f}"))
             self.timer.start(
-                (self.update_interval_s + WeatherApp.STATION_UPDATE_DELAY) * 1000
+                (self.update_interval_s + Constants.STATION_UPDATE_DELAY) * 1000
             )
         item_data = self.station_list.currentData()
         item_data["station_data_update_time"] = observation_time_utc.timestamp()
@@ -496,12 +484,12 @@ class WeatherApp(QWidget):
         forecasts = [
             [
                 datetime.fromtimestamp(forecast_data["list"][i]["dt"]).strftime(
-                    WeatherApp.SHORT_TIME_FORMAT
+                    Formats.SHORT_TIME_FORMAT
                 ),
                 f"{forecast_data["list"][i]["main"]["temp"] - 273.15:.0f}",
                 forecast_data["list"][i]["weather"][0]["id"],
             ]
-            for i in range(WeatherApp.FORECAST_CNT)
+            for i in range(Constants.FORECAST_CNT)
         ]
 
         # -------------------------------------------------------------------
@@ -509,7 +497,7 @@ class WeatherApp(QWidget):
         #
         self.observation_time_value.setText(
             observation_time_utc.astimezone(tz.tzlocal()).strftime(
-                WeatherApp.DATE_TIME_FORMAT
+                Formats.DATE_TIME_FORMAT
             )
         )
 
@@ -534,10 +522,10 @@ class WeatherApp(QWidget):
 
         if weather_id > 0:
             ts = observation_time_utc.astimezone(tz.tzlocal()).strftime(
-                WeatherApp.SHORT_TIME_FORMAT
+                Formats.SHORT_TIME_FORMAT
             )
             temp = self.get_raw_sensor_value(
-                weather_data["sensorValues"], "ILMA", WeatherApp.ConversionType.TO_INT
+                weather_data["sensorValues"], "ILMA", ConversionType.TO_INT
             )
             self.weather_symbols[0]["label"].setText(f"{ts}\n{temp:.0f} °C")
             self.weather_symbols[0]["symbol"].setText(
@@ -568,7 +556,7 @@ class WeatherApp(QWidget):
             )
         else:
             self.forecast_label.setText("")
-        for i in range(WeatherApp.FORECAST_CNT):
+        for i in range(Constants.FORECAST_CNT):
             self.weather_symbols[i + 1]["label"].setText(
                 f"{forecasts[i][0]}\n{forecasts[i][1]} °C"
             )
@@ -576,7 +564,7 @@ class WeatherApp(QWidget):
                 f"{WeatherUtils.get_weather_symbol(forecasts[i][2])}"
             )
 
-        self.update_time_value.setText(datetime.now().strftime(WeatherApp.TIME_FORMAT))
+        self.update_time_value.setText(datetime.now().strftime(Formats.TIME_FORMAT))
 
     def get_present_weather(self, sensor_values_json):
         pw_label = "Säätila:"

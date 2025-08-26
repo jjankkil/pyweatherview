@@ -4,47 +4,59 @@ from weatherutils import WeatherUtils
 
 
 class WeatherStationInfo:
+    class Coordinates:
+        def __init__(self, lat=0.0, lon=0.0, alt=0.0):
+            self._lat = lat  # location latitude
+            self._lon = lon  # location longitude
+            self._alt = alt  # location altitude
+
+    class Properties:
+        def __init__(self):
+            self._id = int(0)
+            self._name = ""
+            self._collection_status = ""
+            self._data_updated_time = datetime(1970, 1, 1, 0, 0, 0)
+
     def __init__(self):
         self._formatted_name = ""
-        self._id = int(0)
-        self._name = ""
-        self._lat = float(0)  # location latitude
-        self._lon = float(0)  # location longitude
-        self._alt = float(0)  # location altitude
-        self._collection_status = ""
-        self._data_updated_time = datetime(1970, 1, 1, 0, 0, 0)
+        self._coordinates = WeatherStationInfo.Coordinates()
+        self._properties = WeatherStationInfo.Properties()
 
     def parse(self, station_json) -> bool:
-        self._id = station_json["id"]
-        self._name = station_json["properties"]["name"]
-        self._collection_status = station_json["properties"]["collectionStatus"]
-        self._lat = station_json["geometry"]["coordinates"][1]
-        self._lon = station_json["geometry"]["coordinates"][0]
-        self._alt = station_json["geometry"]["coordinates"][2]
-        self._data_updated_time = WeatherUtils.timestamp_to_datetime(
+        self._coordinates._lat = station_json["geometry"]["coordinates"][1]
+        self._coordinates._lon = station_json["geometry"]["coordinates"][0]
+        self._coordinates._alt = station_json["geometry"]["coordinates"][2]
+        self._properties._id = station_json["id"]
+        self._properties._name = station_json["properties"]["name"]
+        self._properties._collection_status = station_json["properties"][
+            "collectionStatus"
+        ]
+        self._properties._data_updated_time = WeatherUtils.timestamp_to_datetime(
             station_json["properties"]["dataUpdatedTime"]
         )
         return True
 
     @property
     def id(self) -> int:
-        return self._id
+        return self._properties._id
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._properties._name
 
     @property
     def formatted_name(self) -> str:
         if self._formatted_name == "":
-            self._formatted_name = WeatherUtils.format_station_name(self._name)
+            self._formatted_name = WeatherUtils.format_station_name(
+                self._properties._name
+            )
         return self._formatted_name
 
 
 class WeatherStationList:
     def __init__(self):
         self._data_updated_time = datetime(1970, 1, 1, 0, 0, 0)
-        self._features = [WeatherStationInfo()]  # list of known weather stations
+        self._features = []  # list of known weather stations
 
     def parse(self, station_list_json) -> bool:
         self._features.clear()
@@ -55,10 +67,10 @@ class WeatherStationList:
             )
 
         for station_json in station_list_json["features"]:
-            station = WeatherStationInfo()
-            if not station.parse(station_json):
+            station_info = WeatherStationInfo()
+            if not station_info.parse(station_json):
                 return False
-            self._features.append(station)
+            self._features.append(station_info)
 
         return True
 

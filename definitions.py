@@ -1,4 +1,18 @@
 class Constants:
+    SETTINGS_FILE_NAME = "settings.json"
+    FORECAST_CNT = 3
+    SYMBOL_CNT = FORECAST_CNT + 1
+    STATION_UPDATE_DELAY = 60
+
+
+class Formats:
+    SHORT_TIME_FORMAT = "%H:%M"
+    TIME_FORMAT = "%H:%M:%S"
+    DATE_TIME_FORMAT = "%d.%m.%Y %H:%M"
+    UTC_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+class Urls:
     # Open Weather Map current weather url with placeholders for city name (q) and api key (appid):
     OPENWEATHERMAP_URL = "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}"
 

@@ -1,12 +1,19 @@
 import math
 from datetime import datetime
+from enum import Enum
 
 from dateutil import tz
+
+
+class ConversionType(Enum):
+    TO_INT = 1
+    TO_FLOAT = 2
 
 
 class WeatherUtils:
 
     INVALID_VALUE = -999.0
+    MISSING_UNIT = ["///", "???"]
 
     @staticmethod
     def timestamp_to_datetime(
