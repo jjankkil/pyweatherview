@@ -103,7 +103,9 @@ class WeatherApp(QWidget):
 
     def __init__(self):
         super().__init__()
-        QApplication.instance().aboutToQuit.connect(self._cleanup)
+        instance = QApplication.instance()
+        if instance != None:  # 'None check' keeps Pylance happy
+            instance.aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
 
         # initialize data model:
@@ -201,30 +203,32 @@ class WeatherApp(QWidget):
         main_layout.addWidget(self.update_time_value)
         self.setLayout(main_layout)
 
-        self.station_list_label.setAlignment(Qt.AlignLeft)
-        self.observation_time_label.setAlignment(Qt.AlignLeft)
-        self.observation_time_value.setAlignment(Qt.AlignLeft)
-        self.temperature_label.setAlignment(Qt.AlignLeft)
-        self.temperature_value.setAlignment(Qt.AlignLeft)
+        AlignLeft = Qt.AlignmentFlag.AlignLeft
+        AlignCenter = Qt.AlignmentFlag.AlignCenter
+        self.station_list_label.setAlignment(AlignLeft)
+        self.observation_time_label.setAlignment(AlignLeft)
+        self.observation_time_value.setAlignment(AlignLeft)
+        self.temperature_label.setAlignment(AlignLeft)
+        self.temperature_value.setAlignment(AlignLeft)
         self.temperature_value.setWordWrap(True)
-        self.avg_wind_label.setAlignment(Qt.AlignLeft)
-        self.avg_wind_value.setAlignment(Qt.AlignLeft)
-        self.max_wind_label.setAlignment(Qt.AlignLeft)
-        self.max_wind_value.setAlignment(Qt.AlignLeft)
-        self.visibility_label.setAlignment(Qt.AlignLeft)
-        self.visibility_value.setAlignment(Qt.AlignLeft)
-        self.present_weather_label.setAlignment(Qt.AlignLeft)
-        self.present_weather_value.setAlignment(Qt.AlignLeft)
-        self.forecast_label.setAlignment(Qt.AlignCenter)
+        self.avg_wind_label.setAlignment(AlignLeft)
+        self.avg_wind_value.setAlignment(AlignLeft)
+        self.max_wind_label.setAlignment(AlignLeft)
+        self.max_wind_value.setAlignment(AlignLeft)
+        self.visibility_label.setAlignment(AlignLeft)
+        self.visibility_value.setAlignment(AlignLeft)
+        self.present_weather_label.setAlignment(AlignLeft)
+        self.present_weather_value.setAlignment(AlignLeft)
+        self.forecast_label.setAlignment(AlignCenter)
 
         for i in range(WeatherApp.SYMBOL_CNT):
             self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
-            self.weather_symbols[i]["label"].setAlignment(Qt.AlignCenter)
+            self.weather_symbols[i]["label"].setAlignment(AlignCenter)
             self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
-            self.weather_symbols[i]["symbol"].setAlignment(Qt.AlignCenter)
+            self.weather_symbols[i]["symbol"].setAlignment(AlignCenter)
 
-        self.error_message.setAlignment(Qt.AlignCenter)
-        self.update_time_value.setAlignment(Qt.AlignCenter)
+        self.error_message.setAlignment(AlignCenter)
+        self.update_time_value.setAlignment(AlignCenter)
 
         self.station_list_label.setObjectName("station_list_label")
         self.station_list.setObjectName("station_list")
@@ -269,9 +273,10 @@ class WeatherApp(QWidget):
             current_station_id
         )
 
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self.display_road_weather(self.get_data())
+            data = self.get_data()
+            self.display_road_weather(data[0], data[1], data[2])
         except Exception as e:
             self.display_error(f"Error updating weather: {e}")
         finally:
@@ -392,7 +397,9 @@ class WeatherApp(QWidget):
                         },
                     },
                 )
-        self.station_list.model().sort(0, Qt.SortOrder.AscendingOrder)
+        list_model = self.station_list.model()
+        if list_model != None:  # 'None check' keeps Pylance happy
+            list_model.sort(0, Qt.SortOrder.AscendingOrder)
 
     def get_formatted_sensor_value(self, sensor_values_json, sensor_name):
         sensor = self.find_sensor(sensor_values_json, sensor_name)
@@ -431,11 +438,7 @@ class WeatherApp(QWidget):
         )
         return feels_like
 
-    def display_road_weather(self, data: tuple[any, any, any]):
-        weather_data = data[0]
-        city_data = data[1]
-        forecast = data[2]
-
+    def display_road_weather(self, weather_data, city_data, forecast_data):
         # -------------------------------------------------------------------
         # get data from json
         #
@@ -492,11 +495,11 @@ class WeatherApp(QWidget):
         # get forecast time, temperature and weather_id
         forecasts = [
             [
-                datetime.fromtimestamp(forecast["list"][i]["dt"]).strftime(
+                datetime.fromtimestamp(forecast_data["list"][i]["dt"]).strftime(
                     WeatherApp.SHORT_TIME_FORMAT
                 ),
-                f"{forecast["list"][i]["main"]["temp"] - 273.15:.0f}",
-                forecast["list"][i]["weather"][0]["id"],
+                f"{forecast_data["list"][i]["main"]["temp"] - 273.15:.0f}",
+                forecast_data["list"][i]["weather"][0]["id"],
             ]
             for i in range(WeatherApp.FORECAST_CNT)
         ]
