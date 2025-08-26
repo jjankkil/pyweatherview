@@ -8,6 +8,14 @@ class DataModel:
         self._station_list = station_info.WeatherStationList()  # all stations
         self._current_station = weather_station.WeatherStation()  # selected station
 
+    @property
+    def stations(self):
+        return self._station_list._stations
+
+    @property
+    def current_station(self):
+        return self._current_station
+
     def parse_station_list(self, station_list_json) -> bool:
         return self._station_list.parse(station_list_json)
 

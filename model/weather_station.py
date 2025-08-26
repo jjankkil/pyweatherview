@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 
 from utils import Utils
-from weatherutils import WeatherUtils
+from weatherutils import ConversionType, WeatherUtils
 
 from . import station_info
 
@@ -57,66 +57,20 @@ class Sensor:
         return False
 
     @property
-    def sensor_type(self) -> SensorType:
-        return self._sensor_type
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def value(self) -> float:
+        return self._value
 
     @property
     def unit(self) -> str:
         return self._unit
 
-
-class AirTemperature(Sensor):
-    def __init__(self):
-        super().__init__()
-        self._sensor_type = Sensor.SensorType.TEMPERATURE
-        self._unit = "°C"
-        self._temperature = float(Sensor.INVALID_VALUE)
-        self._temperature_change = float(Sensor.INVALID_VALUE)
-        self._temperature_feels_like = float(Sensor.INVALID_VALUE)
-        self._temperature_change_unit = "°C/h"
-
     @property
-    def temperature(self) -> float:
-        return self._temperature
-
-    @temperature.setter
-    def temperature(self, value):
-        self.temperature = value
-        self.text = f"{str(self.temperature)} {self.unit}"
-
-    @property
-    def temperature_change(self) -> float:
-        return self._temperature_change
-
-    @property
-    def temperature_change_unit(self) -> str:
-        return self._temperature_change_unit
-
-    @property
-    def temperature_feels_like(self) -> float:
-        return self._temperature_feels_like
-
-
-class Wind(Sensor):
-    def __init__(self):
-        super().__init__()
-        self._sensor_type = Sensor.SensorType.WIND
-        self._unit = "m/s"
-        self._wind_speed = float(Sensor.INVALID_VALUE)
-        self._wind_direction = int(Sensor.INVALID_VALUE)
-        self._wind_direction_text = ""
-
-    @property
-    def speed(self) -> float:
-        return self._wind_speed
-
-    @property
-    def direction(self) -> int:
-        return self._wind_direction
-
-    @property
-    def direction_text(self) -> str:
-        return self._wind_direction_text
+    def sensor_value_description(self) -> str:
+        return self._sensor_value_description
 
 
 class WeatherStation:
@@ -126,28 +80,9 @@ class WeatherStation:
 
     def __init__(self):
         self._station_info = station_info.WeatherStationInfo()
-        self._data_updated_time = [datetime(1970, 1, 1, 0, 0, 0)] * 2
-        self.sensor_values = []
-
-    @property
-    def data_updated_time(
-        self, idx: ObservationTimeIdx = ObservationTimeIdx.LATEST
-    ) -> datetime:
-        if idx.value > WeatherStation.ObservationTimeIdx.LATEST.value:
-            return datetime(1970, 1, 1, 0, 0, 0)
-        else:
-            return self._data_updated_time[idx.value]
-
-    @property
-    def seconds_until_next_update(self):
-        return Utils.calculate_seconds_until_next_update(
-            self._data_updated_time[
-                WeatherStation.ObservationTimeIdx.LATEST.value
-            ].timestamp(),
-            self._data_updated_time[
-                WeatherStation.ObservationTimeIdx.PREVIOUS.value
-            ].timestamp(),
-        )
+        time_now = datetime.now()
+        self._data_updated_time = [time_now] * 2
+        self.sensor_values = [Sensor()]
 
     def parse(self, weather_data) -> bool:
         # update 'data updated' times
@@ -173,3 +108,66 @@ class WeatherStation:
                 self.sensor_values.append(sensor_value)
 
         return True
+
+    @property
+    def id(self):
+        return self._station_info.id
+
+    @property
+    def coordinates(self):
+        return self._station_info.coordinates
+
+    @property
+    def data_updated_time(
+        self, idx: ObservationTimeIdx = ObservationTimeIdx.LATEST
+    ) -> datetime:
+        if idx.value > WeatherStation.ObservationTimeIdx.LATEST.value:
+            return datetime(1970, 1, 1, 0, 0, 0)
+        else:
+            return self._data_updated_time[idx.value]
+
+    @property
+    def seconds_until_next_update(self):
+        return Utils.calculate_seconds_until_next_update(
+            self._data_updated_time[
+                WeatherStation.ObservationTimeIdx.LATEST.value
+            ].timestamp(),
+            self._data_updated_time[
+                WeatherStation.ObservationTimeIdx.PREVIOUS.value
+            ].timestamp(),
+        )
+
+    def find_sensor(self, sensor_name: str):
+        for sensor in self.sensor_values:
+            if sensor.name == sensor_name:
+                return sensor
+        return None
+
+    def get_formatted_value(self, sensor_name):
+        sensor = self.find_sensor(sensor_name)
+        if sensor != None:
+            return f"{sensor.value} {sensor.unit}"
+        return ""
+
+    def get_value(self, sensor_name, conversion_type=ConversionType.TO_INT):
+        sensor = self.find_sensor(sensor_name)
+        if sensor == None:
+            return WeatherUtils.INVALID_VALUE
+        if conversion_type == ConversionType.TO_FLOAT:
+            return float(str(sensor.value))
+        if conversion_type == ConversionType.TO_INT:
+            return int(str(sensor.value).split(".")[0])
+
+    def get_present_weather(self):
+        pw_label = "Säätila:"
+        pw_text = ""
+
+        sensor = self.find_sensor("SADE")
+        if sensor == None:
+            return pw_label, pw_text
+
+        if sensor.value >= 1.0:
+            pw_label = "Sade:"
+        pw_text = sensor.sensor_value_description
+
+        return pw_label, pw_text
