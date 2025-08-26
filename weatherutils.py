@@ -96,11 +96,6 @@ class WeatherUtils:
         tokens = raw_name.split("_")
         item_cnt = len(tokens)
 
-        # Open Weathermap does not recognize "Hki", which currently is
-        # the only abbreviation used in station list
-        if item_cnt > 1 and tokens[1] == "Hki":
-            tokens[1] = "Helsinki"
-
         if item_cnt > 3:
             formatted_name = f"{tokens[1]}, {tokens[2]} {tokens[0]} {tokens[3]}"
         elif item_cnt == 3:
