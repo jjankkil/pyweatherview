@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 from enum import Enum
 
@@ -136,6 +137,54 @@ class WeatherStation:
                 WeatherStation.ObservationTimeIdx.PREVIOUS.value
             ].timestamp(),
         )
+
+    @property
+    def air_temperature(self):
+        return self.get_value("ILMA", ConversionType.TO_FLOAT)
+
+    @property
+    def air_temperature_str(self) -> str:
+        return self.get_formatted_value("ILMA")
+
+    @property
+    def air_humidity(self):
+        return self.get_value("ILMAN_KOSTEUS", ConversionType.TO_FLOAT)
+
+    @property
+    def temperature_change_str(self) -> str:
+        return self.get_formatted_value("ILMA_DERIVAATTA")
+
+    @property
+    def wind_speed(self):
+        return self.get_value("KESKITUULI", ConversionType.TO_FLOAT)
+
+    @property
+    def wind_direction(self):
+        return self.get_value("TUULENSUUNTA")
+
+    @property
+    def wind_speed_str(self) -> str:
+        return self.get_formatted_value("KESKITUULI")
+
+    @property
+    def wind_speed_max_str(self):
+        return self.get_formatted_value("MAKSIMITUULI")
+
+    @property
+    def visibility(self):
+        return self.get_value("NÄKYVYYS_M")
+
+    @property
+    def visibility_str(self):
+        value = self.visibility
+        if value == None or value < 0:
+            return ""
+        elif value >= 1000:
+            return f"{math.floor(value/1000)} km"
+        elif value >= 100:
+            return f"{math.floor(value-value%100)} m"
+        else:
+            return f"{math.floor(value-value%10)} m"
 
     def find_sensor(self, sensor_name: str):
         for sensor in self.sensor_values:

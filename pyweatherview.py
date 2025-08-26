@@ -373,16 +373,29 @@ class WeatherApp(QWidget):
         if list_model != None:  # 'None check' keeps Pylance happy
             list_model.sort(0, Qt.SortOrder.AscendingOrder)
 
-    def _calculate_feels_like_temperature(self) -> float:
-        station = self._data_model.current_station
-        wind_speed = station.get_value("KESKITUULI", ConversionType.TO_FLOAT)
-        relative_humidity = station.get_value("ILMAN_KOSTEUS", ConversionType.TO_FLOAT)
-        air_temperature = station.get_value("ILMA", ConversionType.TO_FLOAT)
+    def _get_current_weather_id(self, city_data):
+        id = 0
+        if "weather" in city_data:
+            id = city_data["weather"][0]["id"]
+        return id
 
-        feels_like = WeatherUtils.fmi_feels_like_temperature(
-            wind_speed, relative_humidity, air_temperature
-        )
-        return feels_like
+    def _get_3h_forecast(self, forecast_json):
+        forecast = [
+            [
+                datetime.fromtimestamp(forecast_json["list"][i]["dt"]).strftime(
+                    Formats.SHORT_TIME_FORMAT
+                ),
+                f"{forecast_json["list"][i]["main"]["temp"] - 273.15:.0f}",
+                forecast_json["list"][i]["weather"][0]["id"],
+            ]
+            for i in range(Constants.FORECAST_CNT)
+        ]
+        return forecast
+
+    def _get_forecast_label(self, city_data):
+        if "name" in city_data:
+            return f"\nEnnuste paikkakunnalle {city_data["name"]}:"
+        return ""
 
     def _display_weather_data(self, city_data, forecast_data):
         station = self._data_model.current_station
@@ -395,40 +408,10 @@ class WeatherApp(QWidget):
                 (self.update_interval_s + Constants.STATION_UPDATE_DELAY) * 1000
             )
 
-        # -------------------------------------------------------------------
-        # get data from data model
-        #
-        air_temperature = station.get_formatted_value("ILMA")
-        air_temperature_change = station.get_formatted_value("ILMA_DERIVAATTA")
-        feels_like_temperature = self._calculate_feels_like_temperature()
+        feels_like_temperature = WeatherUtils.fmi_feels_like_temperature(
+            station.wind_speed, station.air_humidity, station.air_temperature
+        )
 
-        wind_avg = station.get_formatted_value("KESKITUULI")
-        wind_deg = station.get_value("TUULENSUUNTA")
-        wind_max = station.get_formatted_value("MAKSIMITUULI")
-
-        weather_id = 0
-        if "weather" in city_data:
-            weather_id = city_data["weather"][0]["id"]
-
-        present_weather = station.get_present_weather()
-        humidity = station.get_value("ILMAN_KOSTEUS")
-        visibility = station.get_value("NÄKYVYYS_M")
-
-        # get forecast time, temperature and weather_id
-        forecasts = [
-            [
-                datetime.fromtimestamp(forecast_data["list"][i]["dt"]).strftime(
-                    Formats.SHORT_TIME_FORMAT
-                ),
-                f"{forecast_data["list"][i]["main"]["temp"] - 273.15:.0f}",
-                forecast_data["list"][i]["weather"][0]["id"],
-            ]
-            for i in range(Constants.FORECAST_CNT)
-        ]
-
-        # -------------------------------------------------------------------
-        # update ui components
-        #
         self.observation_time_value.setText(
             station.data_updated_time.astimezone(tz.tzlocal()).strftime(
                 Formats.DATE_TIME_FORMAT
@@ -437,63 +420,53 @@ class WeatherApp(QWidget):
 
         temperature_str = ""
         if feels_like_temperature == WeatherUtils.INVALID_VALUE:
-            temperature_str = f"{air_temperature}"
+            temperature_str = station.air_temperature_str
         else:
-            temperature_str = (
-                f"{air_temperature}, tuntuu kuin {feels_like_temperature:.1f} °C"
-            )
-        if air_temperature_change != "":
-            temperature_str += f",\nmuutos {air_temperature_change}"
+            temperature_str = f"{station.air_temperature_str}, tuntuu kuin {feels_like_temperature:.1f} °C"
+        if station.temperature_change_str != "":
+            temperature_str += f",\nmuutos {station.temperature_change_str}"
         self.temperature_value.setText(temperature_str)
 
-        if wind_avg == "":
+        if station.wind_speed_str == "":
             self.avg_wind_value.setText("")
         else:
             self.avg_wind_value.setText(
-                f"{wind_avg}, suunta {wind_deg}° {WeatherUtils.wind_direction_as_text(wind_deg)}"
+                f"{station.wind_speed_str}, suunta {station.wind_direction}° {WeatherUtils.wind_direction_as_text(station.wind_direction)}"
             )
-        self.max_wind_value.setText(wind_max)
+        self.max_wind_value.setText(station.wind_speed_max_str)
 
-        if weather_id > 0:
+        current_weather_id = self._get_current_weather_id(city_data)
+        if current_weather_id > 0:
             ts = station.data_updated_time.astimezone(tz.tzlocal()).strftime(
                 Formats.SHORT_TIME_FORMAT
             )
-            temp = station.get_value("ILMA", ConversionType.TO_INT)
-            self.weather_symbols[0]["label"].setText(f"{ts}\n{temp:.0f} °C")
+            self.weather_symbols[0]["label"].setText(
+                f"{ts}\n{station.air_temperature:.0f} °C"
+            )
             self.weather_symbols[0]["symbol"].setText(
-                WeatherUtils.get_weather_symbol(weather_id)
+                WeatherUtils.get_weather_symbol(current_weather_id)
             )
         else:
             self.weather_symbols[0]["label"].setText("")
             self.weather_symbols[0]["symbol"].setText("")
 
+        present_weather = station.get_present_weather()
         if present_weather[1] != "":
             self.present_weather_label.setText(present_weather[0])
             self.present_weather_value.setText(
-                f"{present_weather[1]}, suht. kosteus {humidity}%"
+                f"{present_weather[1]}, suht. kosteus {station.air_humidity:.0f}%"
             )
 
-        if visibility == None or visibility < 0:
-            self.visibility_value.setText("")
-        elif visibility >= 1000:
-            self.visibility_value.setText(f"{math.floor(visibility/1000)} km")
-        elif visibility >= 100:
-            self.visibility_value.setText(f"{math.floor(visibility-visibility%100)} m")
-        else:
-            self.visibility_value.setText(f"{math.floor(visibility-visibility%10)} m")
+        self.visibility_value.setText(station.visibility_str)
 
-        if "name" in city_data:
-            self.forecast_label.setText(
-                f"\nEnnuste paikkakunnalle {city_data["name"]}:"
-            )
-        else:
-            self.forecast_label.setText("")
+        self.forecast_label.setText(self._get_forecast_label(city_data))
+        forecast = self._get_3h_forecast(forecast_data)
         for i in range(Constants.FORECAST_CNT):
             self.weather_symbols[i + 1]["label"].setText(
-                f"{forecasts[i][0]}\n{forecasts[i][1]} °C"
+                f"{forecast[i][0]}\n{forecast[i][1]} °C"
             )
             self.weather_symbols[i + 1]["symbol"].setText(
-                f"{WeatherUtils.get_weather_symbol(forecasts[i][2])}"
+                f"{WeatherUtils.get_weather_symbol(forecast[i][2])}"
             )
 
         self.update_time_value.setText(datetime.now().strftime(Formats.TIME_FORMAT))
