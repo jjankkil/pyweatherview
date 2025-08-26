@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 
 # local modules:
 from definitions import Constants, Formats, Urls
-from model import station_info, weather_station
+from model import data_model
 from utils import Utils
 from weatherutils import ConversionType, WeatherUtils
 
@@ -95,10 +95,7 @@ class WeatherApp(QWidget):
             instance.aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
 
-        # initialize data model:
-        self._station_list = station_info.WeatherStationList()  # all stations
-        self._current_station = weather_station.WeatherStation()  # selected station
-        self._latest_stations = []
+        self._data_model = data_model.DataModel()
 
         self.current_station_id = 0
         self.station_list_label = QLabel("Havaintoasema:", self)
@@ -125,11 +122,11 @@ class WeatherApp(QWidget):
         self.update_time_value = QLabel(self)
         self.settings = Utils.load_settings(Constants.SETTINGS_FILE_NAME)
 
-        self.init_ui()
-        self.init_data()
+        self._init_ui()
+        self._init_data()
         self.station_list.currentIndexChanged.connect(self.update_weather)
         self.update_button.clicked.connect(self.update_weather)
-        self.apply_settings()
+        self._apply_settings()
 
         self.timer = QTimer()
         self.update_interval_s = 60  # initially 1 minute update interval
@@ -144,14 +141,13 @@ class WeatherApp(QWidget):
         data = self.settings
         Utils.save_settings(Constants.SETTINGS_FILE_NAME, data)
 
-    def apply_settings(self):
+    def _apply_settings(self):
         if len(self.settings.items()) == 0:
             return
-
         station_name = self.settings["current_station"]
         self.station_list.setCurrentText(station_name)
 
-    def init_ui(self):
+    def _init_ui(self):
         self.setWindowTitle("Tiesää")
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
         self.setStyleSheet(LAYOUT_STYLES)
@@ -241,9 +237,9 @@ class WeatherApp(QWidget):
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
-    def init_data(self):
-        station_data = self.get_weather_stations()
-        self.display_weather_stations(station_data)
+    def _init_data(self):
+        station_data = self._get_weather_stations()
+        self._display_weather_stations(station_data)
 
     def update_weather(self):
         self.error_message.clear()
@@ -255,21 +251,20 @@ class WeatherApp(QWidget):
             self._clear_ui_components()
             QApplication.processEvents()
 
-        # data model:
-        self._current_station._station_info = self._station_list.find_station_by_id(
-            current_station_id
-        )
+        # update the selected station to data model:
+        self._data_model.set_currect_station(current_station_id)
 
+        # get the data from the APIs
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            data = self.get_data()
-            self.display_road_weather(data[0], data[1], data[2])
+            data = self._get_weather_data()
+            self._display_weather_data(data[0], data[1], data[2])
         except Exception as e:
-            self.display_error(f"Error updating weather: {e}")
+            self._display_error(f"Error updating weather: {e}")
         finally:
             QApplication.restoreOverrideCursor()
 
-    def get_weather_stations(self):
+    def _get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
         Returns a JSON array of stations, or None on error."""
 
@@ -278,21 +273,21 @@ class WeatherApp(QWidget):
             response = requests.get(Urls.STATION_LIST_URL)
             response.raise_for_status()
             json_data = response.json()
-            self._station_list.parse(json_data)  # data model
+            self._data_model.parse_station_list(json_data)
             return json_data["features"]
 
         except:
             error_json = json.loads(response.text)
-            self.display_error(f"Failed to get station list: {error_json["message"]}")
+            self._display_error(f"Failed to get station list: {error_json["message"]}")
             return None
 
-    def get_data(self):
-        station_data = self.get_road_weather().json()
-        city_data = self.get_city_weather().json()
-        forecast = self.get_forecast().json()
+    def _get_weather_data(self):
+        station_data = self._get_road_weather().json()
+        city_data = self._get_city_weather().json()
+        forecast = self._get_forecast().json()
         return station_data, city_data, forecast
 
-    def get_road_weather(self):
+    def _get_road_weather(self):
         """Get weather data from Liikennevirasto Open Data API"""
 
         station_id = self.station_list.currentData()["station_id"]
@@ -301,14 +296,14 @@ class WeatherApp(QWidget):
         try:
             response = requests.get(url)
             response.raise_for_status()
-            self._current_station.parse(response.json())
+            self._data_model.parse_station_data(response.json())
             return response
         except:
             error_json = json.loads(response.text)
-            self.display_error(f"Road weather request failed: {error_json["message"]}")
+            self._display_error(f"Road weather request failed: {error_json["message"]}")
             return json.loads("{}")
 
-    def get_city_weather(self):
+    def _get_city_weather(self):
         """Get weather data from Open Weathermap API.
         This is needed for the present weather symbol."""
 
@@ -330,10 +325,10 @@ class WeatherApp(QWidget):
                 response.raise_for_status()
         except:
             error_json = json.loads(response.text)
-            self.display_error(f"City weather request failed: {error_json["message"]}")
+            self._display_error(f"City weather request failed: {error_json["message"]}")
         return response
 
-    def get_forecast(self):
+    def _get_forecast(self):
         """Get weather forecast from Open Weathermap API"""
         location = self.station_list.currentData()["location"]
         url = Urls.FORERCAST_URL.format(
@@ -344,7 +339,7 @@ class WeatherApp(QWidget):
         response = requests.get(url)
         if response.status_code != 200:
             error_json = json.loads(response.text)
-            self.display_error(f"Forecast request failed: {error_json["message"]}")
+            self._display_error(f"Forecast request failed: {error_json["message"]}")
             return json.loads("{}")
         return response
 
@@ -360,11 +355,11 @@ class WeatherApp(QWidget):
             self.weather_symbols[i]["label"].clear()
             self.weather_symbols[i]["symbol"].clear()
 
-    def display_error(self, message):
+    def _display_error(self, message):
         self._clear_ui_components()
         self.error_message.setText(message)
 
-    def display_weather_stations(self, json_data):
+    def _display_weather_stations(self, json_data):
         """Populate the station list UI component from the given JSON array"""
         self.station_list.clear()
         for station in json_data:
@@ -389,19 +384,19 @@ class WeatherApp(QWidget):
         if list_model != None:  # 'None check' keeps Pylance happy
             list_model.sort(0, Qt.SortOrder.AscendingOrder)
 
-    def get_formatted_sensor_value(self, sensor_values_json, sensor_name):
-        sensor = self.find_sensor(sensor_values_json, sensor_name)
+    def _get_formatted_sensor_value(self, sensor_values_json, sensor_name):
+        sensor = self._find_sensor(sensor_values_json, sensor_name)
         if sensor != None:
             return f"{sensor["value"]} {sensor["unit"]}"
         return ""
 
-    def get_raw_sensor_value(
+    def _get_raw_sensor_value(
         self,
         sensor_values_json,
         sensor_name,
         conversion_type=ConversionType.TO_INT,
     ):
-        sensor = self.find_sensor(sensor_values_json, sensor_name)
+        sensor = self._find_sensor(sensor_values_json, sensor_name)
         if sensor == None:
             return WeatherUtils.INVALID_VALUE
         if conversion_type == ConversionType.TO_FLOAT:
@@ -410,15 +405,15 @@ class WeatherApp(QWidget):
             return int(str(sensor["value"]).split(".")[0])
 
     def _calculate_feels_like_temperature(self, json_data) -> float:
-        wind_speed = self.get_raw_sensor_value(
+        wind_speed = self._get_raw_sensor_value(
             json_data["sensorValues"], "KESKITUULI", ConversionType.TO_FLOAT
         )
-        relative_humidity = self.get_raw_sensor_value(
+        relative_humidity = self._get_raw_sensor_value(
             json_data["sensorValues"],
             "ILMAN_KOSTEUS",
             ConversionType.TO_FLOAT,
         )
-        air_temperature = self.get_raw_sensor_value(
+        air_temperature = self._get_raw_sensor_value(
             json_data["sensorValues"], "ILMA", ConversionType.TO_FLOAT
         )
         feels_like = WeatherUtils.fmi_feels_like_temperature(
@@ -426,7 +421,7 @@ class WeatherApp(QWidget):
         )
         return feels_like
 
-    def display_road_weather(self, weather_data, city_data, forecast_data):
+    def _display_weather_data(self, weather_data, city_data, forecast_data):
         # -------------------------------------------------------------------
         # get data from json
         #
@@ -450,21 +445,21 @@ class WeatherApp(QWidget):
         item_data["station_data_update_time"] = observation_time_utc.timestamp()
         self.station_list.setItemData(self.station_list.currentIndex(), item_data)
 
-        air_temperature = self.get_formatted_sensor_value(
+        air_temperature = self._get_formatted_sensor_value(
             weather_data["sensorValues"], "ILMA"
         )
-        air_temperature_change = self.get_formatted_sensor_value(
+        air_temperature_change = self._get_formatted_sensor_value(
             weather_data["sensorValues"], "ILMA_DERIVAATTA"
         )
         feels_like_temperature = self._calculate_feels_like_temperature(weather_data)
 
-        wind_avg = self.get_formatted_sensor_value(
+        wind_avg = self._get_formatted_sensor_value(
             weather_data["sensorValues"], "KESKITUULI"
         )
-        wind_deg = self.get_raw_sensor_value(
+        wind_deg = self._get_raw_sensor_value(
             weather_data["sensorValues"], "TUULENSUUNTA"
         )
-        wind_max = self.get_formatted_sensor_value(
+        wind_max = self._get_formatted_sensor_value(
             weather_data["sensorValues"], "MAKSIMITUULI"
         )
 
@@ -472,11 +467,11 @@ class WeatherApp(QWidget):
         if "weather" in city_data:
             weather_id = city_data["weather"][0]["id"]
 
-        present_weather = self.get_present_weather(weather_data["sensorValues"])
-        humidity = self.get_raw_sensor_value(
+        present_weather = self._get_present_weather(weather_data["sensorValues"])
+        humidity = self._get_raw_sensor_value(
             weather_data["sensorValues"], "ILMAN_KOSTEUS"
         )
-        visibility = self.get_raw_sensor_value(
+        visibility = self._get_raw_sensor_value(
             weather_data["sensorValues"], "NÄKYVYYS_M"
         )
 
@@ -524,7 +519,7 @@ class WeatherApp(QWidget):
             ts = observation_time_utc.astimezone(tz.tzlocal()).strftime(
                 Formats.SHORT_TIME_FORMAT
             )
-            temp = self.get_raw_sensor_value(
+            temp = self._get_raw_sensor_value(
                 weather_data["sensorValues"], "ILMA", ConversionType.TO_INT
             )
             self.weather_symbols[0]["label"].setText(f"{ts}\n{temp:.0f} °C")
@@ -566,11 +561,11 @@ class WeatherApp(QWidget):
 
         self.update_time_value.setText(datetime.now().strftime(Formats.TIME_FORMAT))
 
-    def get_present_weather(self, sensor_values_json):
+    def _get_present_weather(self, sensor_values_json):
         pw_label = "Säätila:"
         pw_text = ""
 
-        sensor = self.find_sensor(sensor_values_json, "SADE")
+        sensor = self._find_sensor(sensor_values_json, "SADE")
         if sensor == None:
             return pw_label, pw_text
 
@@ -580,7 +575,7 @@ class WeatherApp(QWidget):
 
         return pw_label, pw_text
 
-    def find_sensor(self, sensor_values_json, sensor_name):
+    def _find_sensor(self, sensor_values_json, sensor_name):
         for sensor in sensor_values_json:
             if sensor["name"] == sensor_name:
                 return sensor
