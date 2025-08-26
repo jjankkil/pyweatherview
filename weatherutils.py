@@ -153,7 +153,7 @@ class WeatherUtils:
             return WeatherUtils.INVALID_VALUE
 
     @staticmethod
-    def fmi_feels_like_temperature(wind: float, rh: float, temp: float) -> float:
+    def fmi_feels_like_temperature(wind, rh, temp) -> float:
         # see https://github.com/fmidev/smartmet-library-newbase/blob/master/newbase/NFmiMetMath.cpp#L418
 
         if (
