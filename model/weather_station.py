@@ -48,7 +48,7 @@ class Sensor:
             if not sensor_json["unit"] in WeatherUtils.MISSING_UNIT:
                 self._unit = sensor_json["unit"]
             if "sensorValueDescriptionFi" in sensor_json:
-                self._sensor_value_description = sensor_json["sensorValueDescriptionFI"]
+                self._sensor_value_description = sensor_json["sensorValueDescriptionFi"]
             return True
 
         except:
