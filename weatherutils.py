@@ -1,13 +1,88 @@
+import json
 import math
 from datetime import datetime
 from enum import Enum
 
+import requests
 from dateutil import tz
+
+from definitions import Urls
 
 
 class ConversionType(Enum):
     TO_INT = 1
     TO_FLOAT = 2
+
+
+class Requestor:
+    @staticmethod
+    def get_weather_stations():
+        """Get a list containing all weather stations from from Liikennevirasto Open Data API.
+        Returns a JSON array of stations, or None on error."""
+
+        response = requests.Response()  # get rid of pylint warning
+        try:
+            response = requests.get(Urls.STATION_LIST_URL)
+            response.raise_for_status()
+            json_data = response.json()
+            return json_data["features"]
+
+        except:
+            error_json = json.loads(response.text)
+            # self._display_error(f"Failed to get station list: {error_json["message"]}")
+            return None
+
+    @staticmethod
+    def get_road_weather(road_station_id):
+        """Get weather data from Liikennevirasto Open Data API"""
+
+        url = Urls.WEATHER_STATION_URL.format(road_station_id)
+        response = requests.Response()
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            return response
+        except:
+            error_json = json.loads(response.text)
+            # self._display_error(f"Road weather request failed: {error_json["message"]}")
+            return json.loads("{}")
+
+    @staticmethod
+    def get_city_weather(city: str, coordinates, api_key: str):
+        """Get weather data from Open Weathermap API.
+        This is needed for the present weather symbol."""
+
+        url = Urls.OPENWEATHERMAP_URL.format(city, api_key)
+        response = requests.Response()
+        try:
+            response = requests.get(url)
+            if response.status_code == 404:
+                url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
+                    coordinates.latitude,
+                    coordinates.longitude,
+                    api_key,
+                )
+                response = requests.get(url)
+                response.raise_for_status()
+        except:
+            error_json = json.loads(response.text)
+            # self._display_error(f"City weather request failed: {error_json["message"]}")
+        return response
+
+    @staticmethod
+    def get_forecast(coordinates, api_key: str):
+        """Get weather forecast from Open Weathermap API"""
+        url = Urls.FORERCAST_URL.format(
+            coordinates.latitude,
+            coordinates.longitude,
+            api_key,
+        )
+        response = requests.get(url)
+        if response.status_code != 200:
+            error_json = json.loads(response.text)
+            # self._display_error(f"Forecast request failed: {error_json["message"]}")
+            return json.loads("{}")
+        return response
 
 
 class WeatherUtils:
@@ -81,13 +156,13 @@ class WeatherUtils:
         return result
 
     @staticmethod
-    def get_station_city(formatted_station_name):
+    def get_station_city(formatted_station_name) -> str:
         if formatted_station_name != None:
             if formatted_station_name.find(",") > -1:
                 city = formatted_station_name.split(",")[0]
                 return city
 
-        return None
+        return ""
 
     @staticmethod
     def format_station_name(raw_name: str):

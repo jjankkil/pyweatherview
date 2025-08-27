@@ -69,11 +69,11 @@ class Utils:
             time_elapsed_s = now_ts - latest_observation_time_ts
             waiting_time_s = station_update_interval_s - time_elapsed_s
 
-            # saturate to 0-5 minutes
+            # saturate to 10 minutes
             if waiting_time_s < 0:
                 waiting_time_s = 0
-            if waiting_time_s > 300:
-                waiting_time_s = 300
+            if waiting_time_s > 600:
+                waiting_time_s = 600
             return waiting_time_s
 
         return 0

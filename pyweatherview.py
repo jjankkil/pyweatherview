@@ -1,9 +1,6 @@
-import json
-import math
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
-import requests
 from dateutil import tz
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt, QTimer
@@ -19,10 +16,10 @@ from PyQt5.QtWidgets import (
 )
 
 # local modules:
-from definitions import Constants, Formats, Urls
+from definitions import Constants, Formats
 from model import data_model
 from utils import Utils
-from weatherutils import ConversionType, WeatherUtils
+from weatherutils import Requestor, WeatherUtils
 
 LAYOUT_STYLES = """
     QLabel, QPushButton{
@@ -238,7 +235,7 @@ class WeatherApp(QWidget):
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
     def _init_station_list(self):
-        stations_json = self._get_weather_stations()
+        stations_json = Requestor.get_weather_stations()
         self._data_model.parse_station_list(stations_json)
         self._display_weather_stations(self._data_model)
 
@@ -262,84 +259,17 @@ class WeatherApp(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
 
-    def _get_weather_stations(self):
-        """Get a list containing all weather stations from from Liikennevirasto Open Data API.
-        Returns a JSON array of stations, or None on error."""
-
-        response = requests.Response()  # get rid of pylint warning
-        try:
-            response = requests.get(Urls.STATION_LIST_URL)
-            response.raise_for_status()
-            json_data = response.json()
-            return json_data["features"]
-
-        except:
-            error_json = json.loads(response.text)
-            self._display_error(f"Failed to get station list: {error_json["message"]}")
-            return None
-
     def _get_weather_data(self):
-        station_data = self._get_road_weather().json()
+        station_id = self.station_list.currentData()["station_id"]
+        station_data = Requestor.get_road_weather(station_id).json()
         self._data_model.parse_station_data(station_data)
 
-        city_data = self._get_city_weather().json()
-        forecast = self._get_forecast().json()
-        return city_data, forecast
-
-    def _get_road_weather(self):
-        """Get weather data from Liikennevirasto Open Data API"""
-
-        station_id = self.station_list.currentData()["station_id"]
-        url = Urls.WEATHER_STATION_URL.format(station_id)
-        response = requests.Response()
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response
-        except:
-            error_json = json.loads(response.text)
-            self._display_error(f"Road weather request failed: {error_json["message"]}")
-            return json.loads("{}")
-
-    def _get_city_weather(self):
-        """Get weather data from Open Weathermap API.
-        This is needed for the present weather symbol."""
-
         city = WeatherUtils.get_station_city(self.station_list.currentText())
-        url = Urls.OPENWEATHERMAP_URL.format(
-            city, self.settings["openweathermap_api_key"]
-        )
-        response = requests.Response()
-        try:
-            response = requests.get(url)
-            if response.status_code == 404:
-                location = self._data_model.current_station.coordinates
-                url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
-                    location.latitude,
-                    location.longitude,
-                    self.settings["openweathermap_api_key"],
-                )
-                response = requests.get(url)
-                response.raise_for_status()
-        except:
-            error_json = json.loads(response.text)
-            self._display_error(f"City weather request failed: {error_json["message"]}")
-        return response
-
-    def _get_forecast(self):
-        """Get weather forecast from Open Weathermap API"""
-        location = self._data_model.current_station.coordinates
-        url = Urls.FORERCAST_URL.format(
-            location.latitude,
-            location.longitude,
-            self.settings["openweathermap_api_key"],
-        )
-        response = requests.get(url)
-        if response.status_code != 200:
-            error_json = json.loads(response.text)
-            self._display_error(f"Forecast request failed: {error_json["message"]}")
-            return json.loads("{}")
-        return response
+        coordinates = self._data_model.current_station.coordinates
+        api_key = self.settings["openweathermap_api_key"]
+        city_data = Requestor.get_city_weather(city, coordinates, api_key).json()
+        forecast = Requestor.get_forecast(coordinates, api_key).json()
+        return city_data, forecast
 
     def _clear_ui_components(self):
         self.observation_time_value.clear()
@@ -468,7 +398,23 @@ class WeatherApp(QWidget):
                 f"{WeatherUtils.get_weather_symbol(forecast[i][2])}"
             )
 
-        self.update_time_value.setText(datetime.now().strftime(Formats.TIME_FORMAT))
+        waiting_time_s = station.seconds_until_next_update
+        if waiting_time_s > 0:
+            self.update_interval_s = int(str(f"{waiting_time_s:.0f}"))
+            self.timer.start(
+                (self.update_interval_s + Constants.STATION_UPDATE_DELAY) * 1000
+            )
+
+        time_now = datetime.now()
+        if station.seconds_until_next_update > 0:
+            next_update_time = time_now + timedelta(
+                0, station.seconds_until_next_update
+            )
+            self.update_time_value.setText(
+                f"{time_now.strftime(Formats.TIME_FORMAT)} --> {next_update_time.strftime(Formats.TIME_FORMAT)}"
+            )
+        else:
+            self.update_time_value.setText(f"{time_now.strftime(Formats.TIME_FORMAT)}")
 
 
 if __name__ == "__main__":

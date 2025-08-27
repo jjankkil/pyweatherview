@@ -2,7 +2,7 @@ class Constants:
     SETTINGS_FILE_NAME = "settings.json"
     FORECAST_CNT = 3
     SYMBOL_CNT = FORECAST_CNT + 1
-    STATION_UPDATE_DELAY = 60
+    STATION_UPDATE_DELAY = 120
 
 
 class Formats:
