@@ -58,6 +58,10 @@ class Sensor:
         return False
 
     @property
+    def id(self) -> int:
+        return self._id
+
+    @property
     def name(self) -> str:
         return self._name
 
@@ -171,8 +175,14 @@ class WeatherStation:
         return self.get_formatted_value("MAKSIMITUULI")
 
     @property
+    def present_weather_code(self):
+        # find "VALLITSEVA_SÄÄ" by sensor id:
+        return self.get_value("100")
+
+    @property
     def visibility(self):
-        return self.get_value("NÄKYVYYS_M")
+        # find "NÄKYVYYS_M" by sensor id:
+        return self.get_value("58")
 
     @property
     def visibility_str(self):
@@ -186,20 +196,18 @@ class WeatherStation:
         else:
             return f"{math.floor(value-value%10)} m"
 
-    def find_sensor(self, sensor_name: str):
-        for sensor in self.sensor_values:
-            if sensor.name == sensor_name:
-                return sensor
-        return None
-
     def get_formatted_value(self, sensor_name):
-        sensor = self.find_sensor(sensor_name)
+        sensor = self._find_sensor(sensor_name)
         if sensor != None:
             return f"{sensor.value} {sensor.unit}"
         return ""
 
-    def get_value(self, sensor_name, conversion_type=ConversionType.TO_INT):
-        sensor = self.find_sensor(sensor_name)
+    def get_value(self, sensor_identifier: str, conversion_type=ConversionType.TO_INT):
+        if sensor_identifier.isnumeric():
+            sensor = self._find_sensor_by_id(int(sensor_identifier))
+        else:
+            sensor = self._find_sensor(sensor_identifier)
+
         if sensor == None:
             return WeatherUtils.INVALID_VALUE
         if conversion_type == ConversionType.TO_FLOAT:
@@ -211,7 +219,7 @@ class WeatherStation:
         pw_label = "Säätila:"
         pw_text = ""
 
-        sensor = self.find_sensor("SADE")
+        sensor = self._find_sensor("SADE")
         if sensor == None:
             return pw_label, pw_text
 
@@ -220,3 +228,15 @@ class WeatherStation:
         pw_text = sensor.sensor_value_description
 
         return pw_label, pw_text
+
+    def _find_sensor(self, sensor_name: str):
+        for sensor in self.sensor_values:
+            if sensor.name == sensor_name:
+                return sensor
+        return None
+
+    def _find_sensor_by_id(self, sensor_id: int):
+        for sensor in self.sensor_values:
+            if sensor.id == sensor_id:
+                return sensor
+        return None

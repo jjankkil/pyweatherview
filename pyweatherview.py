@@ -295,7 +295,6 @@ class WeatherApp(QWidget):
         try:
             response = requests.get(url)
             response.raise_for_status()
-            # self._data_model.parse_station_data(response.json())
             return response
         except:
             error_json = json.loads(response.text)
