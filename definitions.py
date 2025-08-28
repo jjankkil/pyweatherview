@@ -14,7 +14,9 @@ class Formats:
 
 class Urls:
     # Open Weather Map current weather url with placeholders for city name (q) and api key (appid):
-    OPENWEATHERMAP_URL = "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}"
+    OPENWEATHERMAP_CITY_URL = (
+        "https://api.openweathermap.org/data/2.5/weather?q={}&appid={}"
+    )
 
     # Open Weather Map current weather url with placeholders for location (lat, lon) and api key (appid):
     OPENWEATHERMAP_LOCATION_URL = (
@@ -22,7 +24,7 @@ class Urls:
     )
 
     # Open Weather Map forcast url (3hrs forecasts for the next 12hrs) with placeholders for coordinates (lat, lon):
-    FORERCAST_URL = (
+    OPENWEATHERMAP_FORERCAST_URL = (
         "https://api.openweathermap.org/data/2.5/forecast?cnt=8&lat={}&lon={}&appid={}"
     )
 

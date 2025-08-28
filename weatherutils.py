@@ -15,74 +15,77 @@ class ConversionType(Enum):
 
 
 class Requestor:
+    error_message = ""
+    status_code = 200
+
+    @staticmethod
+    def reset_error():
+        Requestor.error_message = ""
+        Requestor.status_code = 200
+
+    @staticmethod
+    def success() -> bool:
+        return Requestor.error_message == "" and Requestor.status_code == 200
+
+    @staticmethod
+    def __execute(url: str, key: str = ""):
+        Requestor.reset_error()
+        response = requests.Response()  # get rid of pylint warning
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            json_data = response.json()
+            if key != "":
+                return json_data[key]
+            else:
+                return json_data
+        except:
+            error_json = json.loads(response.text)
+            Requestor.error_message = error_json["message"]
+            return json.loads("{}")
+
     @staticmethod
     def get_weather_stations():
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
-        Returns a JSON array of stations, or None on error."""
+        Returns a JSON array of stations, or empty JSON on error."""
 
-        response = requests.Response()  # get rid of pylint warning
-        try:
-            response = requests.get(Urls.STATION_LIST_URL)
-            response.raise_for_status()
-            json_data = response.json()
-            return json_data["features"]
-
-        except:
-            error_json = json.loads(response.text)
-            # self._display_error(f"Failed to get station list: {error_json["message"]}")
-            return None
+        return Requestor.__execute(Urls.STATION_LIST_URL, "features")
 
     @staticmethod
     def get_road_weather(road_station_id):
         """Get weather data from Liikennevirasto Open Data API"""
 
         url = Urls.WEATHER_STATION_URL.format(road_station_id)
-        response = requests.Response()
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            return response
-        except:
-            error_json = json.loads(response.text)
-            # self._display_error(f"Road weather request failed: {error_json["message"]}")
-            return json.loads("{}")
+        return Requestor.__execute(url)
 
     @staticmethod
     def get_city_weather(city: str, coordinates, api_key: str):
         """Get weather data from Open Weathermap API.
         This is needed for the present weather symbol."""
 
-        url = Urls.OPENWEATHERMAP_URL.format(city, api_key)
-        response = requests.Response()
-        try:
-            response = requests.get(url)
-            if response.status_code == 404:
-                url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
-                    coordinates.latitude,
-                    coordinates.longitude,
-                    api_key,
-                )
-                response = requests.get(url)
-                response.raise_for_status()
-        except:
-            error_json = json.loads(response.text)
-            # self._display_error(f"City weather request failed: {error_json["message"]}")
-        return response
+        url = Urls.OPENWEATHERMAP_CITY_URL.format(city, api_key)
+        data = Requestor.__execute(url)
+        if not Requestor.success():
+            # failed to get weather by city name, try again with coordinates:
+            url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
+                coordinates.latitude,
+                coordinates.longitude,
+                api_key,
+            )
+            data = Requestor.__execute(url)
+
+        return data
 
     @staticmethod
     def get_forecast(coordinates, api_key: str):
         """Get weather forecast from Open Weathermap API"""
-        url = Urls.FORERCAST_URL.format(
+
+        url = Urls.OPENWEATHERMAP_FORERCAST_URL.format(
             coordinates.latitude,
             coordinates.longitude,
             api_key,
         )
-        response = requests.get(url)
-        if response.status_code != 200:
-            error_json = json.loads(response.text)
-            # self._display_error(f"Forecast request failed: {error_json["message"]}")
-            return json.loads("{}")
-        return response
+        return Requestor.__execute(url)
 
 
 class WeatherUtils:

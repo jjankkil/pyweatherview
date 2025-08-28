@@ -1,3 +1,4 @@
+import json
 import sys
 from datetime import datetime, timedelta
 
@@ -237,7 +238,12 @@ class WeatherApp(QWidget):
     def _init_station_list(self):
         stations_json = Requestor.get_weather_stations()
         self._data_model.parse_station_list(stations_json)
-        self._display_weather_stations(self._data_model)
+        if not Requestor.success():
+            self._display_error(
+                f"Failed to get station list: {Requestor.error_message}"
+            )
+        else:
+            self._display_weather_stations(self._data_model)
 
     def _on_station_selected(self):
         self.error_message.clear()
@@ -261,14 +267,30 @@ class WeatherApp(QWidget):
 
     def _get_weather_data(self):
         station_id = self.station_list.currentData()["station_id"]
-        station_data = Requestor.get_road_weather(station_id).json()
+        station_data = Requestor.get_road_weather(station_id)
+        if not Requestor.success():
+            self._display_error(
+                f"Road weather request failed: {Requestor.error_message}"
+            )
+            return [json.loads("{}"), json.loads("{}")]
         self._data_model.parse_station_data(station_data)
 
         city = WeatherUtils.get_station_city(self.station_list.currentText())
         coordinates = self._data_model.current_station.coordinates
         api_key = self.settings["openweathermap_api_key"]
-        city_data = Requestor.get_city_weather(city, coordinates, api_key).json()
-        forecast = Requestor.get_forecast(coordinates, api_key).json()
+
+        city_data = Requestor.get_city_weather(city, coordinates, api_key)
+        if not Requestor.success():
+            self._display_error(
+                f"City weather request failed: {Requestor.error_message}"
+            )
+
+        forecast = Requestor.get_forecast(coordinates, api_key)
+        if not Requestor.success():
+            self._display_error(
+                f"Weather forecast request failed: {Requestor.error_message}"
+            )
+
         return city_data, forecast
 
     def _clear_ui_components(self):
