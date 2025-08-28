@@ -33,3 +33,67 @@ class Urls:
 
     # Liikennevirasto's weather station data with a placeholder for numeric station id, e.g. 12082:
     WEATHER_STATION_URL = "https://tie.digitraffic.fi/api/weather/v1/stations/{}/data"
+
+
+class Styles:
+    DEFAULT = """
+        QLabel, QPushButton{
+            font-family: calibri;
+        }
+        QLabel#station_list_label{
+            font-size: 20px;
+        }
+        QComboBox#station_list{
+            font-size: 17px;
+        }
+        QLabel#observation_time_label{
+            font-size: 20px;
+        }
+        QLabel#observation_time_value{
+            font-size: 20px;
+        }
+        QLabel#temperature_label{
+            font-size: 20px;
+        }
+        QLabel#temperature_value{
+            font-size: 20px;
+        }
+        QLabel#avg_wind_label{
+            font-size: 20px;
+        }
+        QLabel#avg_wind_value{
+            font-size: 20px;
+        }
+        QLabel#max_wind_label{
+            font-size: 20px;
+        }
+        QLabel#max_wind_value{
+            font-size: 20px;
+        }
+        QLabel#visibility_label{
+            font-size: 20px;
+        }
+        QLabel#visibility_value{
+            font-size: 20px;
+        }
+        QLabel#present_weather_label{
+            font-size: 20px;
+        }
+        QLabel#present_weather_value{
+            font-size: 20px;
+        }
+        QLabel#forecast_label{
+            font-size: 20px;
+        }
+        QLabel#error_message{
+            font-size: 20px;
+            font-style: italic;
+        }
+        QPushButton#update_button{
+            font-size: 20px;
+            font-weight: bold;
+        }
+        QLabel#update_time_value{
+            font-size: 15px;
+        }
+    """

@@ -17,72 +17,10 @@ from PyQt5.QtWidgets import (
 )
 
 # local modules:
-from definitions import Constants, Formats
+from definitions import Constants, Formats, Styles
 from model import data_model
 from utils import Utils
 from weatherutils import Requestor, WeatherUtils
-
-LAYOUT_STYLES = """
-    QLabel, QPushButton{
-        font-family: calibri;
-    }
-    QLabel#station_list_label{
-        font-size: 20px;
-    }
-    QComboBox#station_list{
-        font-size: 17px;
-    }
-    QLabel#observation_time_label{
-        font-size: 20px;
-    }
-    QLabel#observation_time_value{
-        font-size: 20px;
-    }
-    QLabel#temperature_label{
-        font-size: 20px;
-    }
-    QLabel#temperature_value{
-        font-size: 20px;
-    }
-    QLabel#avg_wind_label{
-        font-size: 20px;
-    }
-    QLabel#avg_wind_value{
-        font-size: 20px;
-    }
-    QLabel#max_wind_label{
-        font-size: 20px;
-    }
-    QLabel#max_wind_value{
-        font-size: 20px;
-    }
-    QLabel#visibility_label{
-        font-size: 20px;
-    }
-    QLabel#visibility_value{
-        font-size: 20px;
-    }
-    QLabel#present_weather_label{
-        font-size: 20px;
-    }
-    QLabel#present_weather_value{
-        font-size: 20px;
-    }
-    QLabel#forecast_label{
-        font-size: 20px;
-    }
-    QLabel#error_message{
-        font-size: 20px;
-        font-style: italic;
-    }
-    QPushButton#update_button{
-        font-size: 20px;
-        font-weight: bold;
-    }
-    QLabel#update_time_value{
-        font-size: 15px;
-    }
-"""
 
 
 class WeatherApp(QWidget):
@@ -148,7 +86,13 @@ class WeatherApp(QWidget):
     def _init_ui(self):
         self.setWindowTitle("Tiesää")
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
-        self.setStyleSheet(LAYOUT_STYLES)
+
+        try:
+            file_name = "pyweatherview.styles"
+            with open(file_name, "r") as f:
+                self.setStyleSheet(f.read())
+        except:
+            self.setStyleSheet(Styles.DEFAULT)
 
         grid_layout = QGridLayout()
         grid_layout.addWidget(self.station_list_label, 0, 0)
