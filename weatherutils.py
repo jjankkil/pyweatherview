@@ -15,21 +15,19 @@ class ConversionType(Enum):
 
 
 class Requestor:
-    error_message = ""
-    status_code = 200
+    def __init__(self):
+        self.reset_error()
 
-    @staticmethod
-    def reset_error():
-        Requestor.error_message = ""
-        Requestor.status_code = 200
+    def reset_error(self):
+        self.status_code = 200
+        self.error_message = ""
 
-    @staticmethod
-    def success() -> bool:
-        return Requestor.error_message == "" and Requestor.status_code == 200
+    @property
+    def has_error(self) -> bool:
+        return self.status_code != 200 or self.error_message != ""
 
-    @staticmethod
-    def __execute(url: str, key: str = ""):
-        Requestor.reset_error()
+    def __execute(self, url: str, key: str = ""):
+        self.reset_error()
         response = requests.Response()  # get rid of pylint warning
         try:
             response = requests.get(url)
@@ -41,43 +39,39 @@ class Requestor:
                 return json_data
         except:
             error_json = json.loads(response.text)
-            Requestor.error_message = error_json["message"]
+            self.error_message = error_json["message"]
             return json.loads("{}")
 
-    @staticmethod
-    def get_weather_stations():
+    def get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
         Returns a JSON array of stations, or empty JSON on error."""
 
-        return Requestor.__execute(Urls.STATION_LIST_URL, "features")
+        return self.__execute(Urls.STATION_LIST_URL, "features")
 
-    @staticmethod
-    def get_road_weather(road_station_id):
+    def get_road_weather(self, road_station_id):
         """Get weather data from Liikennevirasto Open Data API"""
 
         url = Urls.WEATHER_STATION_URL.format(road_station_id)
-        return Requestor.__execute(url)
+        return self.__execute(url)
 
-    @staticmethod
-    def get_city_weather(city: str, coordinates, api_key: str):
+    def get_city_weather(self, city: str, coordinates, api_key: str):
         """Get weather data from Open Weathermap API.
         This is needed for the present weather symbol."""
 
         url = Urls.OPENWEATHERMAP_CITY_URL.format(city, api_key)
-        data = Requestor.__execute(url)
-        if not Requestor.success():
+        data = self.__execute(url)
+        if self.has_error:
             # failed to get weather by city name, try again with coordinates:
             url = Urls.OPENWEATHERMAP_LOCATION_URL.format(
                 coordinates.latitude,
                 coordinates.longitude,
                 api_key,
             )
-            data = Requestor.__execute(url)
+            data = self.__execute(url)
 
         return data
 
-    @staticmethod
-    def get_forecast(coordinates, api_key: str):
+    def get_forecast(self, coordinates, api_key: str):
         """Get weather forecast from Open Weathermap API"""
 
         url = Urls.OPENWEATHERMAP_FORERCAST_URL.format(
@@ -85,7 +79,7 @@ class Requestor:
             coordinates.longitude,
             api_key,
         )
-        return Requestor.__execute(url)
+        return self.__execute(url)
 
 
 class WeatherUtils:
@@ -211,7 +205,7 @@ class WeatherUtils:
         return True
 
     @staticmethod
-    def _fmi_summer_simmer_index(rh: float, temp: float) -> float:
+    def __fmi_summer_simmer_index(rh: float, temp: float) -> float:
         # see https://github.com/fmidev/smartmet-library-newbase/blob/master/newbase/NFmiMetMath.cpp#L418
 
         simmer_limit = 14.5
@@ -262,7 +256,7 @@ class WeatherUtils:
             )
 
             # Heat index
-            heat = WeatherUtils._fmi_summer_simmer_index(rh, temp)
+            heat = WeatherUtils.__fmi_summer_simmer_index(rh, temp)
             if heat == WeatherUtils.INVALID_VALUE:
                 return WeatherUtils.INVALID_VALUE
 

@@ -236,12 +236,11 @@ class WeatherApp(QWidget):
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
     def _init_station_list(self):
-        stations_json = Requestor.get_weather_stations()
+        req = Requestor()
+        stations_json = req.get_weather_stations()
         self._data_model.parse_station_list(stations_json)
-        if not Requestor.success():
-            self._display_error(
-                f"Failed to get station list: {Requestor.error_message}"
-            )
+        if req.has_error:
+            self._display_error(f"Failed to get station list: {req.error_message}")
         else:
             self._display_weather_stations(self._data_model)
 
@@ -266,12 +265,12 @@ class WeatherApp(QWidget):
             QApplication.restoreOverrideCursor()
 
     def _get_weather_data(self):
+        req = Requestor()
+
         station_id = self.station_list.currentData()["station_id"]
-        station_data = Requestor.get_road_weather(station_id)
-        if not Requestor.success():
-            self._display_error(
-                f"Road weather request failed: {Requestor.error_message}"
-            )
+        station_data = req.get_road_weather(station_id)
+        if req.has_error:
+            self._display_error(f"Road weather request failed: {req.error_message}")
             return [json.loads("{}"), json.loads("{}")]
         self._data_model.parse_station_data(station_data)
 
@@ -279,17 +278,13 @@ class WeatherApp(QWidget):
         coordinates = self._data_model.current_station.coordinates
         api_key = self.settings["openweathermap_api_key"]
 
-        city_data = Requestor.get_city_weather(city, coordinates, api_key)
-        if not Requestor.success():
-            self._display_error(
-                f"City weather request failed: {Requestor.error_message}"
-            )
+        city_data = req.get_city_weather(city, coordinates, api_key)
+        if req.has_error:
+            self._display_error(f"City weather request failed: {req.error_message}")
 
-        forecast = Requestor.get_forecast(coordinates, api_key)
-        if not Requestor.success():
-            self._display_error(
-                f"Weather forecast request failed: {Requestor.error_message}"
-            )
+        forecast = req.get_forecast(coordinates, api_key)
+        if req.has_error:
+            self._display_error(f"Weather forecast request failed: {req.error_message}")
 
         return city_data, forecast
 
