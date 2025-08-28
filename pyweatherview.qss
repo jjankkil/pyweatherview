@@ -1,0 +1,76 @@
+QLabel, QPushButton{
+    font-family: calibri;
+}
+QLabel#station_list_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QComboBox#station_list{
+    font-size: 17px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#observation_time_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#observation_time_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#temperature_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#temperature_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#avg_wind_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#avg_wind_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#max_wind_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#max_wind_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#visibility_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#visibility_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#present_weather_label{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#present_weather_value{
+    font-size: 20px;
+    qproperty-alignment: AlignLeft;
+}
+QLabel#forecast_label{
+    font-size: 20px;
+    qproperty-alignment: AlignCenter;
+}
+QLabel#error_message{
+    font-size: 20px;
+    font-style: italic;
+    qproperty-alignment: AlignCenter;
+}
+QPushButton#update_button{
+    font-size: 20px;
+    font-weight: bold;
+}
+QLabel#update_time_value{
+    font-size: 15px;
+    qproperty-alignment: AlignCenter;
+}

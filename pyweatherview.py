@@ -88,7 +88,7 @@ class WeatherApp(QWidget):
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
 
         try:
-            file_name = "pyweatherview.styles"
+            file_name = "pyweatherview.qss"
             with open(file_name, "r") as f:
                 self.setStyleSheet(f.read())
         except:
@@ -128,32 +128,12 @@ class WeatherApp(QWidget):
         main_layout.addWidget(self.update_time_value)
         self.setLayout(main_layout)
 
-        AlignLeft = Qt.AlignmentFlag.AlignLeft
         AlignCenter = Qt.AlignmentFlag.AlignCenter
-        self.station_list_label.setAlignment(AlignLeft)
-        self.observation_time_label.setAlignment(AlignLeft)
-        self.observation_time_value.setAlignment(AlignLeft)
-        self.temperature_label.setAlignment(AlignLeft)
-        self.temperature_value.setAlignment(AlignLeft)
-        self.temperature_value.setWordWrap(True)
-        self.avg_wind_label.setAlignment(AlignLeft)
-        self.avg_wind_value.setAlignment(AlignLeft)
-        self.max_wind_label.setAlignment(AlignLeft)
-        self.max_wind_value.setAlignment(AlignLeft)
-        self.visibility_label.setAlignment(AlignLeft)
-        self.visibility_value.setAlignment(AlignLeft)
-        self.present_weather_label.setAlignment(AlignLeft)
-        self.present_weather_value.setAlignment(AlignLeft)
-        self.forecast_label.setAlignment(AlignCenter)
-
         for i in range(Constants.SYMBOL_CNT):
             self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
             self.weather_symbols[i]["label"].setAlignment(AlignCenter)
             self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
             self.weather_symbols[i]["symbol"].setAlignment(AlignCenter)
-
-        self.error_message.setAlignment(AlignCenter)
-        self.update_time_value.setAlignment(AlignCenter)
 
         self.station_list_label.setObjectName("station_list_label")
         self.station_list.setObjectName("station_list")
