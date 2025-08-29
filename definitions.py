@@ -45,8 +45,7 @@ class Styles:
             qproperty-alignment: AlignLeft;
         }
         QComboBox#station_list{
-            font-size: 17px;
-            qproperty-alignment: AlignLeft;
+            font-size: 18px;
         }
         QLabel#observation_time_label{
             font-size: 20px;

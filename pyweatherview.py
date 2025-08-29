@@ -3,9 +3,9 @@ import sys
 from datetime import datetime, timedelta
 
 from dateutil import tz
-from PyQt5 import QtGui
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import (
+from PyQt6 import QtGui
+from PyQt6.QtCore import QEvent, Qt, QTimer, QTranslator
+from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
     QGridLayout,
@@ -132,7 +132,7 @@ class WeatherApp(QWidget):
         for i in range(Constants.SYMBOL_CNT):
             self.weather_symbols[i]["label"].setFont(QtGui.QFont("", 15))
             self.weather_symbols[i]["label"].setAlignment(AlignCenter)
-            self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 60))
+            self.weather_symbols[i]["symbol"].setFont(QtGui.QFont("Segoe UI emoji", 55))
             self.weather_symbols[i]["symbol"].setAlignment(AlignCenter)
 
         self.station_list_label.setObjectName("station_list_label")
@@ -365,4 +365,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     weather_app = WeatherApp()
     weather_app.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
