@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from dateutil import tz
 from PyQt6 import QtGui
-from PyQt6.QtCore import QEvent, Qt, QTimer, QTranslator
+from PyQt6.QtCore import Qt, QTimer, QTranslator
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -68,6 +68,15 @@ class WeatherApp(QWidget):
         self.update_interval_s = 60  # initially 1 minute update interval
         self.timer.timeout.connect(self.timer_func)
         self.timer.start(self.update_interval_s * 1000)
+
+        # set up localised ui texts:
+        self._ui_languages = [
+            ("Finnish", ""),
+            ("English", "fi-eng"),
+        ]
+        self._translator = QTranslator(self)
+        self._set_ui_language("fi-eng")
+        self._set_ui_texts()
 
     def timer_func(self):
         self.update_button.click()
@@ -158,6 +167,36 @@ class WeatherApp(QWidget):
 
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
+
+    def _set_ui_language(self, lang_options):
+        instance = QApplication.instance()
+        if instance != None:
+            if lang_options:
+                self._translator.load(lang_options)
+                instance.installTranslator(self._translator)
+            else:
+                instance.removeTranslator(self._translator)
+
+    def _set_ui_texts(self):
+        self.station_list_label.setText(
+            QApplication.translate("WeatherApp", "Havaintoasema:")
+        )
+        self.observation_time_label.setText(
+            QApplication.translate("WeatherApp", "Havaintoaika:")
+        )
+        self.temperature_label.setText(
+            QApplication.translate("WeatherApp", "Lämpötila:")
+        )
+        self.avg_wind_label.setText(QApplication.translate("WeatherApp", "Keskituuli:"))
+        self.max_wind_label.setText(QApplication.translate("WeatherApp", "Max. tuuli:"))
+        self.visibility_label.setText(QApplication.translate("WeatherApp", "Näkyvyys:"))
+        self.present_weather_label.setText(
+            QApplication.translate("WeatherApp", "Säätila:")
+        )
+        self.forecast_label.setText(
+            QApplication.translate("WeatherApp", "Ennuste paikkakunnalle")
+        )
+        self.update_button.setText(QApplication.translate("WeatherApp", "Päivitä"))
 
     def _init_station_list(self):
         req = Requestor()
@@ -255,7 +294,7 @@ class WeatherApp(QWidget):
                 datetime.fromtimestamp(forecast_json["list"][i]["dt"]).strftime(
                     Formats.SHORT_TIME_FORMAT
                 ),
-                f"{forecast_json["list"][i]["main"]["temp"] - 273.15:.0f}",
+                f"{forecast_json['list'][i]['main']['temp'] - 273.15:.0f}",
                 forecast_json["list"][i]["weather"][0]["id"],
             ]
             for i in range(Constants.FORECAST_CNT)
@@ -264,7 +303,7 @@ class WeatherApp(QWidget):
 
     def _get_forecast_label(self, city_data):
         if "name" in city_data:
-            return f"\nEnnuste paikkakunnalle {city_data["name"]}:"
+            return f"\nEnnuste paikkakunnalle {city_data['name']}:"
         return ""
 
     def _display_weather_data(self, city_data, forecast_data):
@@ -359,9 +398,6 @@ class WeatherApp(QWidget):
 
 
 if __name__ == "__main__":
-    if not Utils.CheckPythonVersion():
-        sys.exit()
-
     app = QApplication(sys.argv)
     weather_app = WeatherApp()
     weather_app.show()
