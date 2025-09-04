@@ -8,8 +8,6 @@ Weather station data is fetched from Digitraffic REST/JSON API (see https://www.
 
 After startup, the applications polls the API in one minute interval, and when it detects a data update, it calculates how long it needs to wait before the next update (plus some slack time). When the waiting period is over, it polls the API again for updated data. This minimizes the number of polls done to the API, which limits the number of available queries for free user accounts.
 
-The application has so far been developed and run only on Windows 11. On Linux there will probably be problems because of possibly missing Segoe UI emoji font used for the weather symbols.
-
 In order to run the application, Python packages PyQt6, requests and python-dateutil need to be installed, e.g.
 ```pip install pyqt6, requests, python-dateutil```
 
