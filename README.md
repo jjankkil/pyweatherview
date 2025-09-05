@@ -13,9 +13,9 @@ In order to run the application, Python packages PyQt6, requests and python-date
 
 #### Known issues
 - Waiting period calculation may get confused when a new weather station is selected from the list. This can be solved by clicking the update ("Päivitä") button.
+- Localization is not complete: only labels have been translated to English. To change them back to Finnish, file fi-eng.qm must be renamed or removed.
 
 #### Improvement ideas
 - Weather symbols could be implemented using some other technique that Segoe UI emoji font.
 - Night time weather symbols could be added.
-- Localization; now all texts are hard-coded in Finnish.
 - For easy installation, the application should be packaged.
