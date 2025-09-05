@@ -33,6 +33,8 @@ class Utils:
                         settings["openweathermap_api_key"] = ""
                     if "latest_stations" not in settings:
                         settings["latest_stations"] = []
+                    if "ui_language" not in settings:
+                        settings["ui_language"] = ""
         except FileNotFoundError:
             print(f"{file_path} not found!")
 

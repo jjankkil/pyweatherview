@@ -5,12 +5,13 @@ from datetime import datetime, timedelta
 from dateutil import tz
 from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, QTimer, QTranslator
+from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtWidgets import (
     QApplication,
-    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -21,6 +22,10 @@ from definitions import Constants, Formats, Styles
 from model import data_model
 from utils import Utils
 from weatherutils import Requestor, WeatherUtils
+
+# indices to language list:
+FI = 0
+EN = 1
 
 
 class WeatherApp(QWidget):
@@ -71,12 +76,48 @@ class WeatherApp(QWidget):
 
         # set up localised ui texts:
         self._ui_languages = [
-            ("Finnish", ""),
+            ("Suomi", ""),
             ("English", "fi-eng"),
         ]
         self._translator = QTranslator(self)
-        self._set_ui_language("fi-eng")
-        self._set_ui_texts()
+
+        self.context_menu = QMenu(self)
+        self.ui_finnish = self.context_menu.addAction(self._ui_languages[FI][0])
+        self.ui_finnish.setCheckable(True)  # type: ignore
+        self.ui_finnish.triggered.connect(self.__select_ui_finnish)  # type: ignore
+
+        self.ui_english = self.context_menu.addAction(self._ui_languages[EN][0])
+        self.ui_english.setCheckable(True)  # type: ignore
+        self.ui_english.triggered.connect(self.__select_ui_english)  # type: ignore
+
+        initial_language = self.settings["ui_language"]
+        if initial_language == self._ui_languages[FI][1]:
+            self.ui_finnish.setChecked(True)  # type: ignore
+        else:
+            self.ui_english.setChecked(True)  # type: ignore
+        self._set_ui_language(initial_language)
+        self._set_ui_labels()
+
+    def contextMenuEvent(self, event):  # type: ignore
+        # show the popup menu
+        self.context_menu.exec(event.globalPos())
+
+    def __select_language(self, language_id):
+        self._set_ui_language(language_id)
+        self._set_ui_labels()
+        self.settings["ui_language"] = language_id
+
+    def __select_ui_finnish(self):
+        language_id = self._ui_languages[FI][1]
+        self.__select_language(language_id)
+        self.ui_finnish.setChecked(True)  # type: ignore
+        self.ui_english.setChecked(False)  # type: ignore
+
+    def __select_ui_english(self):
+        language_id = self._ui_languages[EN][1]
+        self.__select_language(language_id)
+        self.ui_finnish.setChecked(False)  # type: ignore
+        self.ui_english.setChecked(True)  # type: ignore
 
     def timer_func(self):
         self.update_button.click()
@@ -177,7 +218,7 @@ class WeatherApp(QWidget):
             else:
                 instance.removeTranslator(self._translator)
 
-    def _set_ui_texts(self):
+    def _set_ui_labels(self):
         self.station_list_label.setText(
             QApplication.translate("WeatherApp", "Havaintoasema:")
         )
@@ -237,6 +278,7 @@ class WeatherApp(QWidget):
             return [json.loads("{}"), json.loads("{}")]
         self._data_model.parse_station_data(station_data)
 
+        # todo: add city weather and forecast to data model
         city = WeatherUtils.get_station_city(self.station_list.currentText())
         coordinates = self._data_model.current_station.coordinates
         api_key = self.settings["openweathermap_api_key"]
@@ -368,7 +410,11 @@ class WeatherApp(QWidget):
 
         self.visibility_value.setText(station.visibility_str)
 
-        self.forecast_label.setText(self._get_forecast_label(city_data))
+        label = QApplication.translate("WeatherApp", "Ennuste paikkakunnalle")
+        if "name" in city_data:
+            label += f" {city_data['name']}"
+        self.forecast_label.setText(label)
+
         forecast = self._get_3h_forecast(forecast_data)
         for i in range(Constants.FORECAST_CNT):
             self.weather_symbols[i + 1]["label"].setText(
