@@ -83,22 +83,20 @@ class WeatherApp(QWidget):
 
         self.context_menu = QMenu(self)
         self.ui_finnish = self.context_menu.addAction(self._ui_languages[FI][0])
-        self.ui_finnish.setCheckable(True)  # type: ignore
-        self.ui_finnish.triggered.connect(self.__select_ui_finnish)  # type: ignore
+        self.ui_finnish.setCheckable(True)
+        self.ui_finnish.triggered.connect(self.__select_ui_finnish)
 
         self.ui_english = self.context_menu.addAction(self._ui_languages[EN][0])
-        self.ui_english.setCheckable(True)  # type: ignore
-        self.ui_english.triggered.connect(self.__select_ui_english)  # type: ignore
+        self.ui_english.setCheckable(True)
+        self.ui_english.triggered.connect(self.__select_ui_english)
 
         initial_language = self.settings["ui_language"]
         if initial_language == self._ui_languages[FI][1]:
-            self.ui_finnish.setChecked(True)  # type: ignore
+            self.__select_ui_finnish()
         else:
-            self.ui_english.setChecked(True)  # type: ignore
-        self._set_ui_language(initial_language)
-        self._set_ui_labels()
+            self.__select_ui_english()
 
-    def contextMenuEvent(self, event):  # type: ignore
+    def contextMenuEvent(self, event):
         # show the popup menu
         self.context_menu.exec(event.globalPos())
 
@@ -108,16 +106,18 @@ class WeatherApp(QWidget):
         self.settings["ui_language"] = language_id
 
     def __select_ui_finnish(self):
+        self.setWindowTitle("Tiesää")
         language_id = self._ui_languages[FI][1]
         self.__select_language(language_id)
-        self.ui_finnish.setChecked(True)  # type: ignore
-        self.ui_english.setChecked(False)  # type: ignore
+        self.ui_finnish.setChecked(True)
+        self.ui_english.setChecked(False)
 
     def __select_ui_english(self):
+        self.setWindowTitle("Road Weather")
         language_id = self._ui_languages[EN][1]
         self.__select_language(language_id)
-        self.ui_finnish.setChecked(False)  # type: ignore
-        self.ui_english.setChecked(True)  # type: ignore
+        self.ui_finnish.setChecked(False)
+        self.ui_english.setChecked(True)
 
     def timer_func(self):
         self.update_button.click()
@@ -134,7 +134,6 @@ class WeatherApp(QWidget):
         self.station_list.setCurrentText(station_name)
 
     def _init_ui(self):
-        self.setWindowTitle("Tiesää")
         self.setWindowIcon(QtGui.QIcon("pyweatherview.ico"))
 
         try:
@@ -205,7 +204,6 @@ class WeatherApp(QWidget):
         self.error_message.setObjectName("error_message")
         self.update_button.setObjectName("update_button")
         self.update_time_value.setObjectName("update_time_value")
-
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
