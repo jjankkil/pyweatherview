@@ -58,7 +58,7 @@ QLabel#present_weather_value{
 }
 QLabel#forecast_label{
     font-size: 20px;
-    qproperty-alignment: AlignCenter;
+    qproperty-alignment: AlignLeft;
 }
 QLabel#error_message{
     font-size: 20px;

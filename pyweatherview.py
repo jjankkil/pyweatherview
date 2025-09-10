@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from dateutil import tz
 from PyQt6 import QtGui
 from PyQt6.QtCore import Qt, QTimer, QTranslator
-from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -53,7 +53,7 @@ class WeatherApp(QWidget):
         self.visibility_value = QLabel(self)
         self.present_weather_label = QLabel("Säätila:", self)
         self.present_weather_value = QLabel(self)
-        self.forecast_label = QLabel("Ennuste paikkakunnalle", self)
+        self.forecast_label = QLabel(self)
         self.weather_symbols = [
             {"label": QLabel(f" \n ", self), "symbol": QLabel(self)}
             for i in range(Constants.SYMBOL_CNT)
@@ -209,14 +209,13 @@ class WeatherApp(QWidget):
         # self.station_list.setEditable(True)
         # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
-    def _set_ui_language(self, lang_options):
+    def _set_ui_language(self, language_id):
         instance = QApplication.instance()
         if instance != None:
-            if lang_options:
-                self._translator.load(lang_options)
+            instance.removeTranslator(self._translator)
+            if language_id:
+                self._translator.load(language_id)
                 instance.installTranslator(self._translator)
-            else:
-                instance.removeTranslator(self._translator)
 
     def _set_ui_labels(self):
         self.station_list_label.setText(
@@ -234,9 +233,14 @@ class WeatherApp(QWidget):
         self.present_weather_label.setText(
             QApplication.translate("WeatherApp", "Säätila:")
         )
+
         self.forecast_label.setText(
-            QApplication.translate("WeatherApp", "Ennuste paikkakunnalle")
+            "{0} {1}:".format(
+                QApplication.translate("WeatherApp", "Ennuste paikkakunnalle"),
+                WeatherUtils.get_station_city(self.station_list.currentText()),
+            )
         )
+
         self.update_button.setText(QApplication.translate("WeatherApp", "Päivitä"))
 
     def _init_station_list(self):
@@ -279,17 +283,23 @@ class WeatherApp(QWidget):
         self._data_model.parse_station_data(station_data)
 
         # todo: add city weather and forecast to data model
-        city = WeatherUtils.get_station_city(self.station_list.currentText())
-        coordinates = self._data_model.current_station.coordinates
         api_key = self.settings["openweathermap_api_key"]
+        if api_key == "":
+            city_data = json.loads("{}")
+            forecast = json.loads("{}")
+        else:
+            city = WeatherUtils.get_station_city(self.station_list.currentText())
+            coordinates = self._data_model.current_station.coordinates
 
-        city_data = req.get_city_weather(city, coordinates, api_key)
-        if req.has_error:
-            self._display_error(f"City weather request failed: {req.error_message}")
+            city_data = req.get_city_weather(city, coordinates, api_key)
+            if req.has_error:
+                self._display_error(f"City weather request failed: {req.error_message}")
 
-        forecast = req.get_forecast(coordinates, api_key)
-        if req.has_error:
-            self._display_error(f"Weather forecast request failed: {req.error_message}")
+            forecast = req.get_forecast(coordinates, api_key)
+            if req.has_error:
+                self._display_error(
+                    f"Weather forecast request failed: {req.error_message}"
+                )
 
         return city_data, forecast
 
@@ -350,6 +360,7 @@ class WeatherApp(QWidget):
 
     def _display_weather_data(self, city_data, forecast_data):
         station = self._data_model.current_station
+        self.forecast_label.setText("")
 
         # calculate how long we need to wait until the next update and add some slack
         waiting_time_s = station.seconds_until_next_update
@@ -386,43 +397,49 @@ class WeatherApp(QWidget):
             )
         self.max_wind_value.setText(station.wind_speed_max_str)
 
-        current_weather_id = self._get_current_weather_id(city_data)
-        if current_weather_id > 0:
-            ts = station.data_updated_time.astimezone(tz.tzlocal()).strftime(
-                Formats.SHORT_TIME_FORMAT
-            )
-            self.weather_symbols[0]["label"].setText(
-                f"{ts}\n{station.air_temperature:.0f} °C"
-            )
-            self.weather_symbols[0]["symbol"].setText(
-                WeatherUtils.get_weather_symbol(current_weather_id)
-            )
-        else:
-            self.weather_symbols[0]["label"].setText("")
-            self.weather_symbols[0]["symbol"].setText("")
-
         present_weather = station.get_present_weather()
         if present_weather[1] != "":
-            self.present_weather_label.setText(present_weather[0])
+            tmp = QApplication.translate("WeatherApp", present_weather[0])
+            self.present_weather_label.setText(tmp)
             self.present_weather_value.setText(
                 f"{present_weather[1]}, suht. kosteus {station.air_humidity:.0f}%"
             )
 
         self.visibility_value.setText(station.visibility_str)
 
-        label = QApplication.translate("WeatherApp", "Ennuste paikkakunnalle")
-        if "name" in city_data:
-            label += f" {city_data['name']}"
-        self.forecast_label.setText(label)
+        if bool(city_data):
+            current_weather_id = self._get_current_weather_id(city_data)
+            if current_weather_id > 0:
+                ts = station.data_updated_time.astimezone(tz.tzlocal()).strftime(
+                    Formats.SHORT_TIME_FORMAT
+                )
+                self.weather_symbols[0]["label"].setText(
+                    f"{ts}\n{station.air_temperature:.0f} °C"
+                )
+                self.weather_symbols[0]["symbol"].setText(
+                    WeatherUtils.get_weather_symbol(current_weather_id)
+                )
+            else:
+                self.weather_symbols[0]["label"].setText("")
+                self.weather_symbols[0]["symbol"].setText("")
 
-        forecast = self._get_3h_forecast(forecast_data)
-        for i in range(Constants.FORECAST_CNT):
-            self.weather_symbols[i + 1]["label"].setText(
-                f"{forecast[i][0]}\n{forecast[i][1]} °C"
-            )
-            self.weather_symbols[i + 1]["symbol"].setText(
-                f"{WeatherUtils.get_weather_symbol(forecast[i][2])}"
-            )
+            label = QApplication.translate("WeatherApp", "Ennuste paikkakunnalle")
+            if "name" in city_data:
+                label += f" {city_data['name']}:"
+            self.forecast_label.setText(label)
+
+        if bool(forecast_data):
+            forecast = self._get_3h_forecast(forecast_data)
+            for i in range(Constants.FORECAST_CNT):
+                self.weather_symbols[i + 1]["label"].setText(
+                    f"{forecast[i][0]}\n{forecast[i][1]} °C"
+                )
+                self.weather_symbols[i + 1]["symbol"].setText(
+                    f"{WeatherUtils.get_weather_symbol(forecast[i][2])}"
+                )
+
+        if not self.settings["openweathermap_api_key"]:
+            self.error_message.setText("Open Weather API key is missing")
 
         waiting_time_s = station.seconds_until_next_update
         if waiting_time_s > 0:
