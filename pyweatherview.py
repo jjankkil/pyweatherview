@@ -32,7 +32,7 @@ class WeatherApp(QWidget):
     def __init__(self):
         super().__init__()
         instance = QApplication.instance()
-        if instance != None:  # 'None check' keeps Pylance happy
+        if instance != None:
             instance.aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
 
@@ -204,8 +204,6 @@ class WeatherApp(QWidget):
         self.error_message.setObjectName("error_message")
         self.update_button.setObjectName("update_button")
         self.update_time_value.setObjectName("update_time_value")
-        # self.station_list.setEditable(True)
-        # self.station_list.setInsertPolicy(QComboBox.InsertAlphabetically)
 
     def _set_ui_language(self, language_id):
         instance = QApplication.instance()
@@ -329,7 +327,7 @@ class WeatherApp(QWidget):
 
         # sort the combo box:
         list_model = self.station_list.model()
-        if list_model != None:  # 'None check' keeps Pylance happy
+        if list_model != None:
             list_model.sort(0, Qt.SortOrder.AscendingOrder)
 
     def _get_current_weather_id(self, city_data):
