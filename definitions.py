@@ -2,7 +2,12 @@ class Constants:
     SETTINGS_FILE_NAME = "settings.json"
     FORECAST_CNT = 3
     SYMBOL_CNT = FORECAST_CNT + 1
-    STATION_UPDATE_DELAY = 120
+    STATION_UPDATE_DELAY_S = (
+        60  # wait this many seconds more than the station's update interval
+    )
+    DEFAULT_POLLING_INTERVAL_S = (
+        60  # if we can't determine the update interval, poll every 60s
+    )
 
 
 class Formats:

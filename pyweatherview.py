@@ -65,14 +65,15 @@ class WeatherApp(QWidget):
 
         self._init_ui()
         self._init_station_list()
+        self._apply_settings()
         self.station_list.currentIndexChanged.connect(self._on_station_selected)
         self.update_button.clicked.connect(self._on_station_selected)
-        self._apply_settings()
 
         self.timer = QTimer()
-        self.update_interval_s = 60  # initially 1 minute update interval
+        self.update_interval_s = Constants.DEFAULT_POLLING_INTERVAL_S
         self.timer.timeout.connect(self.timer_func)
         self.timer.start(self.update_interval_s * 1000)
+        self._on_station_selected()
 
         # set up localised ui texts:
         self._ui_languages = [
@@ -358,14 +359,6 @@ class WeatherApp(QWidget):
         station = self._data_model.current_station
         self.forecast_label.setText("")
 
-        # calculate how long we need to wait until the next update and add some slack
-        waiting_time_s = station.seconds_until_next_update
-        if waiting_time_s > 0:
-            self.update_interval_s = int(str(f"{waiting_time_s:.0f}"))
-            self.timer.start(
-                (self.update_interval_s + Constants.STATION_UPDATE_DELAY) * 1000
-            )
-
         feels_like_temperature = WeatherUtils.fmi_feels_like_temperature(
             station.wind_speed, station.air_humidity, station.air_temperature
         )
@@ -437,12 +430,15 @@ class WeatherApp(QWidget):
         if not self.settings["openweathermap_api_key"]:
             self.error_message.setText("Open Weather API key is missing")
 
+        # calculate how long we need to wait until the next update and add some slack
         waiting_time_s = station.seconds_until_next_update
-        if waiting_time_s > 0:
+        if waiting_time_s <= 0:
+            self.update_interval_s = Constants.DEFAULT_POLLING_INTERVAL_S
+        else:
             self.update_interval_s = int(str(f"{waiting_time_s:.0f}"))
-            self.timer.start(
-                (self.update_interval_s + Constants.STATION_UPDATE_DELAY) * 1000
-            )
+        self.timer.start(
+            (self.update_interval_s + Constants.STATION_UPDATE_DELAY_S) * 1000
+        )
 
         time_now = datetime.now()
         if station.seconds_until_next_update > 0:
