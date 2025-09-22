@@ -64,7 +64,8 @@ class WeatherApp(QWidget):
         self.settings = Utils.load_settings(Constants.SETTINGS_FILE_NAME)
 
         self._init_ui()
-        self._init_station_list()
+        if self._get_station_list():
+            self._display_weather_stations(self._data_model)
         self._apply_settings()
         self.station_list.currentIndexChanged.connect(self._on_station_selected)
         self.update_button.clicked.connect(self._on_station_selected)
@@ -240,14 +241,14 @@ class WeatherApp(QWidget):
 
         self.update_button.setText(QApplication.translate("WeatherApp", "Päivitä"))
 
-    def _init_station_list(self):
+    def _get_station_list(self) -> bool:
         req = Requestor()
         stations_json = req.get_weather_stations()
         self._data_model.parse_station_list(stations_json)
         if req.has_error:
             self._display_error(f"Failed to get station list: {req.error_message}")
-        else:
-            self._display_weather_stations(self._data_model)
+            return False
+        return True
 
     def _on_station_selected(self):
         self.error_message.clear()
@@ -343,7 +344,7 @@ class WeatherApp(QWidget):
                 datetime.fromtimestamp(forecast_json["list"][i]["dt"]).strftime(
                     Formats.SHORT_TIME_FORMAT
                 ),
-                f"{forecast_json['list'][i]['main']['temp'] - 273.15:.0f}",
+                int(f"{forecast_json['list'][i]['main']['temp'] - 273.15:.0f}"),
                 forecast_json["list"][i]["weather"][0]["id"],
             ]
             for i in range(Constants.FORECAST_CNT)

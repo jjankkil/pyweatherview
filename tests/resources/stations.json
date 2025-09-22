@@ -1,0 +1,131 @@
+{
+  "type": "FeatureCollection",
+  "dataUpdatedTime": "2025-09-19T06:45:15Z",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 1001,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.596399, 60.228227, 0.0]
+      },
+      "properties": {
+        "id": 1001,
+        "name": "vt1_Espoo_Nupuri",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2025-06-17T03:05:33Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1002,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.898476, 60.166907, 0.0]
+      },
+      "properties": {
+        "id": 1002,
+        "name": "kt51_Hki_Lapinlahti",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2025-06-10T03:04:58Z"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": 1003,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.24062, 60.311628, 0.0]
+      },
+      "properties": {
+        "id": 1003,
+        "name": "st110_Vihti_Myllylampi",
+        "collectionStatus": "GATHERING",
+        "state": "OK",
+        "dataUpdatedTime": "2024-11-05T07:10:14Z"
+      }
+    },
+    {
+      "comment": "Station to be skipped because of LA in the name",
+      "type": "Feature",
+      "id": 19906,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [27.386801, 68.602037, 148.0]
+      },
+      "properties": {
+        "id": 19906,
+        "name": "Ivalo_LA04",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2022-09-27T07:20:32Z"
+      }
+    },
+    {
+      "comment": "Station to be skipped because of TEST in the name",
+      "type": "Feature",
+      "id": 15011,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [18.518625, 61.726952, 0.0]
+      },
+      "properties": {
+        "id": 15011,
+        "name": "TEST_TSA_1",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2022-11-08T13:42:29Z"
+      }
+    },
+    {
+      "comment": "Station to be skipped because of Meteo in the name",
+      "type": "Feature",
+      "id": 45002,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [25.33868, 64.93519, 16.0]
+      },
+      "properties": {
+        "id": 45002,
+        "name": "EFOU_12_Meteo",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2023-05-29T11:40:47Z"
+      }
+    },
+    {
+      "comment": "Station to be skipped because of LAMID in the name",
+      "type": "Feature",
+      "id": 19923,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [27.804016, 63.002658, 90.0]
+      },
+      "properties": {
+        "id": 19923,
+        "name": "Kuopio_LAMID",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2022-09-27T07:20:32Z"
+      }
+    },
+    {
+      "comment": "Station to be skipped because of Opt in the name",
+      "type": "Feature",
+      "id": 1155,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.578376, 60.227719, 0.0]
+      },
+      "properties": {
+        "id": 1155,
+        "name": "vt1_Espoo_Nupuri_OptX2",
+        "collectionStatus": "GATHERING",
+        "state": null,
+        "dataUpdatedTime": "2024-10-02T11:21:07Z"
+      }
+    }
+  ]
+}
