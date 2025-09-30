@@ -2,10 +2,28 @@ import math
 from datetime import datetime
 from enum import Enum
 
-from utils import Utils
-from weatherutils import ConversionType, WeatherUtils
+from definitions import Constants, ConversionType
+from utils.utils import Utils
 
 from . import station_info
+
+@staticmethod
+def ok_to_add_station(raw_name: str):
+    station_name_filter_list = [
+        "Test",
+        "LA",
+        "TSA",
+        "TEST",
+        "Meteo",
+        "LAMID",
+        "OptX",
+    ]
+
+    for filter in station_name_filter_list:
+        if raw_name.find(filter) > -1:
+            return False
+
+    return True
 
 
 class Sensor:
@@ -42,11 +60,11 @@ class Sensor:
             self._station_id = sensor_json["stationId"]
             self._name = sensor_json["name"]
             self._short_name = sensor_json["shortName"]
-            self._measured_time = WeatherUtils.timestamp_to_datetime(
+            self._measured_time = Utils.timestamp_to_datetime(
                 sensor_json["measuredTime"]
             )
             self._value = sensor_json["value"]
-            if not sensor_json["unit"] in WeatherUtils.MISSING_UNIT:
+            if not sensor_json["unit"] in Constants.MISSING_UNIT:
                 self._unit = sensor_json["unit"]
             if "sensorValueDescriptionFi" in sensor_json:
                 self._sensor_value_description = sensor_json["sensorValueDescriptionFi"]
@@ -91,7 +109,7 @@ class WeatherStation:
 
     def parse(self, weather_data) -> bool:
         # update 'data updated' times
-        observation_time = WeatherUtils.timestamp_to_datetime(
+        observation_time = Utils.timestamp_to_datetime(
             weather_data["dataUpdatedTime"]
         )
         if (
@@ -209,7 +227,7 @@ class WeatherStation:
             sensor = self._find_sensor(sensor_identifier)
 
         if sensor == None:
-            return WeatherUtils.INVALID_VALUE
+            return Constants.INVALID_VALUE
         if conversion_type == ConversionType.TO_FLOAT:
             return float(str(sensor.value))
         if conversion_type == ConversionType.TO_INT:

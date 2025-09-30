@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from weatherutils import WeatherUtils
+from model.weather_station import ok_to_add_station
+from utils.utils import Utils
+from utils.weather_utils import WeatherUtils
 
 
 class WeatherStationInfo:
@@ -43,7 +45,7 @@ class WeatherStationInfo:
         self._properties._collection_status = station_json["properties"][
             "collectionStatus"
         ]
-        self._properties._data_updated_time = WeatherUtils.timestamp_to_datetime(
+        self._properties._data_updated_time = Utils.timestamp_to_datetime(
             station_json["properties"]["dataUpdatedTime"]
         )
         return True
@@ -112,6 +114,6 @@ class WeatherStationList:
     def get_station_name_list(self):
         list = []
         for station in self._stations:
-            if WeatherUtils.ok_to_add_station(station.name):
+            if ok_to_add_station(station.name):
                 list.append(station.formatted_name)
         return list

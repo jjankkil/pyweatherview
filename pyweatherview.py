@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 import sys
 from datetime import datetime, timedelta
@@ -20,12 +21,15 @@ from PyQt6.QtWidgets import (
 # local modules:
 from definitions import Constants, Formats, Styles
 from model import data_model
-from utils import Utils
-from weatherutils import Requestor, WeatherUtils
+from model.weather_station import ok_to_add_station
+from utils.utils import Utils
+from utils.weather_utils import WeatherUtils
+from utils.web_utils import RequestRunner
 
 # indices to language list:
-FI = 0
-EN = 1
+class LangId:
+    FI = 0
+    EN = 1
 
 
 class WeatherApp(QWidget):
@@ -83,16 +87,16 @@ class WeatherApp(QWidget):
         self._translator = QTranslator(self)
 
         self.context_menu = QMenu(self)
-        self.ui_finnish = self.context_menu.addAction(self._ui_languages[FI][0])
+        self.ui_finnish = self.context_menu.addAction(self._ui_languages[LangId.FI][0])
         self.ui_finnish.setCheckable(True)
         self.ui_finnish.triggered.connect(self.__select_ui_finnish)
 
-        self.ui_english = self.context_menu.addAction(self._ui_languages[EN][0])
+        self.ui_english = self.context_menu.addAction(self._ui_languages[LangId.EN][0])
         self.ui_english.setCheckable(True)
         self.ui_english.triggered.connect(self.__select_ui_english)
 
         initial_language = self.settings["ui_language"]
-        if initial_language == self._ui_languages[FI][1]:
+        if initial_language == self._ui_languages[LangId.FI][1]:
             self.__select_ui_finnish()
         else:
             self.__select_ui_english()
@@ -108,14 +112,14 @@ class WeatherApp(QWidget):
 
     def __select_ui_finnish(self):
         self.setWindowTitle("Tiesää")
-        language_id = self._ui_languages[FI][1]
+        language_id = self._ui_languages[LangId.FI][1]
         self.__select_language(language_id)
         self.ui_finnish.setChecked(True)
         self.ui_english.setChecked(False)
 
     def __select_ui_english(self):
         self.setWindowTitle("Road Weather")
-        language_id = self._ui_languages[EN][1]
+        language_id = self._ui_languages[LangId.EN][1]
         self.__select_language(language_id)
         self.ui_finnish.setChecked(False)
         self.ui_english.setChecked(True)
@@ -234,14 +238,14 @@ class WeatherApp(QWidget):
         self.forecast_label.setText(
             "{0} {1}:".format(
                 QApplication.translate("WeatherApp", "Ennuste paikkakunnalle"),
-                WeatherUtils.get_station_city(self.station_list.currentText()),
+                Utils.get_station_city(self.station_list.currentText()),
             )
         )
 
         self.update_button.setText(QApplication.translate("WeatherApp", "Päivitä"))
 
     def _init_station_list(self):
-        req = Requestor()
+        req = RequestRunner()
         stations_json = req.get_weather_stations()
         self._data_model.parse_station_list(stations_json)
         if req.has_error:
@@ -270,7 +274,7 @@ class WeatherApp(QWidget):
             QApplication.restoreOverrideCursor()
 
     def _get_weather_data(self):
-        req = Requestor()
+        req = RequestRunner()
 
         station_id = self.station_list.currentData()["station_id"]
         station_data = req.get_road_weather(station_id)
@@ -285,7 +289,7 @@ class WeatherApp(QWidget):
             city_data = json.loads("{}")
             forecast = json.loads("{}")
         else:
-            city = WeatherUtils.get_station_city(self.station_list.currentText())
+            city = Utils.get_station_city(self.station_list.currentText())
             coordinates = self._data_model.current_station.coordinates
 
             city_data = req.get_city_weather(city, coordinates, api_key)
@@ -321,7 +325,7 @@ class WeatherApp(QWidget):
         self.station_list.clear()
 
         for station in data_model.stations:
-            if WeatherUtils.ok_to_add_station(station.name):
+            if ok_to_add_station(station.name):
                 self.station_list.addItem(
                     station.formatted_name, {"station_id": station.id}
                 )
@@ -370,7 +374,7 @@ class WeatherApp(QWidget):
         )
 
         temperature_str = ""
-        if feels_like_temperature == WeatherUtils.INVALID_VALUE:
+        if feels_like_temperature == Constants.INVALID_VALUE:
             temperature_str = station.air_temperature_str
         else:
             temperature_str = f"{station.air_temperature_str}, tuntuu kuin {feels_like_temperature:.1f} °C"
