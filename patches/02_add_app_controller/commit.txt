@@ -1,0 +1,7 @@
+Commit: 02_add_app_controller
+Message: Add AppController to orchestrate DataModel and WeatherService
+
+Files:
+- controller/app_controller.py (new)
+
+Purpose: centralize business logic and decouple UI from parsing/network calls.

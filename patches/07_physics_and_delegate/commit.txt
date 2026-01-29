@@ -1,0 +1,8 @@
+Commit: 07_physics_and_delegate
+Message: Add model/physics.py and delegate WeatherUtils calculations
+
+Files:
+- model/physics.py (new)
+- utils/weather_utils.py (modified to delegate)
+
+Purpose: move pure calculations into model layer and keep presentation in view/UI helper.
