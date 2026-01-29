@@ -1,0 +1,8 @@
+Commit: 08_background_worker
+Message: Add NetworkWorker QThread and wire UI to use background thread for network calls
+
+Files:
+- view/background_worker.py (new)
+- pyweatherview.py (modified)
+
+Purpose: avoid blocking the Qt main thread while fetching network data.

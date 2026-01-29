@@ -1,0 +1,9 @@
+Commit: 04_move_ui_helpers
+Message: Move UI helper functions to `view/ui_helpers.py` and add shims in `utils/`
+
+Files:
+- view/ui_helpers.py (new)
+- utils/utils.py (modified)
+- utils/weather_utils.py (modified)
+
+Purpose: Separate UI presentation helpers from general-purpose utility modules.
