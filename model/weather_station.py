@@ -3,27 +3,11 @@ from datetime import datetime
 from enum import Enum
 
 from definitions import Constants, ConversionType
+
 from utils.utils import Utils
 
 from . import station_info
-
-@staticmethod
-def ok_to_add_station(raw_name: str):
-    station_name_filter_list = [
-        "Test",
-        "LA",
-        "TSA",
-        "TEST",
-        "Meteo",
-        "LAMID",
-        "OptX",
-    ]
-
-    for filter in station_name_filter_list:
-        if raw_name.find(filter) > -1:
-            return False
-
-    return True
+from .helpers import ok_to_add_station
 
 
 class Sensor:
@@ -135,6 +119,10 @@ class WeatherStation:
     @property
     def id(self):
         return self._station_info.id
+
+    @property
+    def formatted_name(self) -> str:
+        return self._station_info.formatted_name
 
     @property
     def coordinates(self):
