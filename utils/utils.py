@@ -8,18 +8,16 @@ from dateutil import tz
 
 from definitions import Urls
 
+from view.ui_helpers import get_station_city as _get_station_city
+from view.ui_helpers import set_taskbar_icon as _set_taskbar_icon
+
 
 class Utils:
 
-    # todo: move to view
+    # UI helpers are now in view.ui_helpers; keep shims for backwards compatibility
     @staticmethod
     def get_station_city(formatted_station_name) -> str:
-        if formatted_station_name != None:
-            if formatted_station_name.find(",") > -1:
-                city = formatted_station_name.split(",")[0]
-                return city
-
-        return ""
+        return _get_station_city(formatted_station_name)
 
     @staticmethod
     def timestamp_to_datetime(
@@ -35,12 +33,10 @@ class Utils:
     
     @staticmethod
     def set_taskbar_icon():
+        # forward to view helper
         try:
-            # use the application icon also as taskbar icon instead of generic Python process icon:
-            myappid = "63BD6F81-EFE4-444F-8F9F-186984210EA9"  # arbitrary string
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-        except:
-            # hoping that we end up here if not running on windows...
+            _set_taskbar_icon()
+        except Exception:
             pass
 
     @staticmethod
