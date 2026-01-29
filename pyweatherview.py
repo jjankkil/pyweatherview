@@ -21,10 +21,11 @@ from PyQt6.QtWidgets import (
 # local modules:
 from definitions import Constants, Formats, Styles
 from model import data_model
-from model.weather_station import ok_to_add_station
+from model.helpers import ok_to_add_station
 from utils.utils import Utils
 from utils.weather_utils import WeatherUtils
-from utils.web_utils import RequestRunner
+from controller.app_controller import AppController
+from view.background_worker import NetworkWorker
 
 # indices to language list:
 class LangId:
@@ -40,7 +41,9 @@ class WeatherApp(QWidget):
             instance.aboutToQuit.connect(self._cleanup)
         Utils.set_taskbar_icon()
 
-        self._data_model = data_model.DataModel()
+        # Use AppController to orchestrate services and the data model
+        self._controller = AppController()
+        self._data_model = self._controller.model
 
         self.current_station_id = 0
         self.station_list_label = QLabel("Havaintoasema:", self)
@@ -245,11 +248,9 @@ class WeatherApp(QWidget):
         self.update_button.setText(QApplication.translate("WeatherApp", "Päivitä"))
 
     def _init_station_list(self):
-        req = RequestRunner()
-        stations_json = req.get_weather_stations()
-        self._data_model.parse_station_list(stations_json)
-        if req.has_error:
-            self._display_error(f"Failed to get station list: {req.error_message}")
+        success = self._controller.fetch_and_load_station_list()
+        if self._controller.service.has_error:
+            self._display_error(f"Failed to get station list: {self._controller.service.error_message}")
         else:
             self._display_weather_stations(self._data_model)
 
@@ -259,29 +260,27 @@ class WeatherApp(QWidget):
         # If the user has changed the station, clear all UI components
         station_id = self.station_list.currentData()["station_id"]
         if station_id != self._data_model.current_station.id:
-            self._data_model.set_currect_station(station_id)
+            self._controller.set_current_station(station_id)
             self._clear_ui_components()
             QApplication.processEvents()
 
-        # get the data from the APIs
+        # get the data from the APIs — run network calls in a background thread
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            data = self._get_weather_data()
-            self._display_weather_data(data[0], data[1])
-        except Exception as e:
-            self._display_error(f"Error updating weather: {e}")
-        finally:
-            QApplication.restoreOverrideCursor()
+        self.update_button.setEnabled(False)
+
+        api_key = self.settings["openweathermap_api_key"]
+        station_id = station_id
+
+        self._worker = NetworkWorker(self._controller, station_id, api_key)
+        self._worker.finished.connect(self._on_worker_finished)
+        self._worker.start()
 
     def _get_weather_data(self):
-        req = RequestRunner()
-
         station_id = self.station_list.currentData()["station_id"]
-        station_data = req.get_road_weather(station_id)
-        if req.has_error:
-            self._display_error(f"Road weather request failed: {req.error_message}")
+        success = self._controller.fetch_and_load_station_data(station_id)
+        if self._controller.service.has_error:
+            self._display_error(f"Road weather request failed: {self._controller.service.error_message}")
             return [json.loads("{}"), json.loads("{}")]
-        self._data_model.parse_station_data(station_data)
 
         # todo: add city weather and forecast to data model
         api_key = self.settings["openweathermap_api_key"]
@@ -292,17 +291,26 @@ class WeatherApp(QWidget):
             city = Utils.get_station_city(self.station_list.currentText())
             coordinates = self._data_model.current_station.coordinates
 
-            city_data = req.get_city_weather(city, coordinates, api_key)
-            if req.has_error:
-                self._display_error(f"City weather request failed: {req.error_message}")
+            city_data = self._controller.service.get_city_weather(
+                city, coordinates, api_key
+            )
+            if self._controller.service.has_error:
+                self._display_error(f"City weather request failed: {self._controller.service.error_message}")
 
-            forecast = req.get_forecast(coordinates, api_key)
-            if req.has_error:
-                self._display_error(
-                    f"Weather forecast request failed: {req.error_message}"
-                )
+            forecast = self._controller.service.get_forecast(coordinates, api_key)
+            if self._controller.service.has_error:
+                self._display_error(f"Weather forecast request failed: {self._controller.service.error_message}")
 
         return city_data, forecast
+
+    def _on_worker_finished(self, city_data, forecast, error_message):
+        QApplication.restoreOverrideCursor()
+        self.update_button.setEnabled(True)
+
+        if error_message:
+            self._display_error(error_message)
+            # still attempt to render any data that arrived
+        self._display_weather_data(city_data, forecast)
 
     def _clear_ui_components(self):
         self.observation_time_value.clear()
