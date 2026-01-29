@@ -11,7 +11,7 @@ Weather station data is fetched from Digitraffic REST/JSON API (see https://www.
 After startup, the applications polls the API in one minute interval, and when it detects a data update, it calculates how long it needs to wait before the next update (plus some slack time). When this waiting period is over, it polls the API again for updated data. This minimizes the number of polls done to the API, which limits the number of available queries for free user accounts.
 
 In order to run the application, Python packages PyQt6, requests and python-dateutil need to be installed, e.g.
-`pip install pyqt6, requests, python-dateutil`
+`pip install -r requirements.txt`
 
 #### Known issues
 
@@ -23,3 +23,29 @@ In order to run the application, Python packages PyQt6, requests and python-date
 - Night time weather symbols should be added.
 - Weather symbols could be implemented using some other technique that Segoe UI emoji font.
 - For easy installation, the application should be packaged.
+
+## Refactor (2026-01-29)
+
+This repository was refactored to improve separation of concerns and testability.
+
+High-level changes
+- `controller/` — contains `WeatherService` (network wrapper) and `AppController` (application orchestrator).
+- `model/` — domain objects and parsing (`data_model.py`, `station_info.py`, `weather_station.py`, `physics.py`, `helpers.py`).
+- `view/` — UI helpers and a `NetworkWorker` to run network calls off the main thread (`ui_helpers.py`, `background_worker.py`).
+- `utils/` — compatibility shims and utility functions; `web_utils.py` now centralizes HTTP calls via `RequestRunner`.
+
+Testing & CI
+- Tests live under `tests/` and use `pytest` with `pytest-cov` for coverage.
+- A GitHub Actions workflow `/.github/workflows/ci.yml` runs the test suite and coverage on push/PR.
+- Run tests locally:
+
+```bash
+pip install -r requirements.txt
+python -m pytest --maxfail=1 --disable-warnings -q --cov=. --cov-report=term-missing
+```
+
+Notes for developers
+- The UI (`pyweatherview.py`) now uses `AppController` to fetch and load data; avoid direct network calls from UI code.
+- Use `WeatherService` when writing non-UI code that needs network data.
+- Add tests for new functionality under `tests/` and keep network calls mocked in unit tests.
+
