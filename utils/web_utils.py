@@ -1,5 +1,6 @@
 import json
 import requests
+from requests.exceptions import RequestException
 from definitions import Urls
 
 
@@ -8,6 +9,7 @@ class RequestRunner:
         self.reset_error()
 
     def reset_error(self):
+        # 200 means OK; 0 means no response (network failure)
         self.status_code = 200
         self.error_message = ""
 
@@ -16,20 +18,43 @@ class RequestRunner:
         return self.status_code != 200 or self.error_message != ""
 
     def __execute(self, url: str, key: str = ""):
+        """Execute a GET request and return parsed JSON or an empty dict on error.
+
+        This method sets `self.status_code` and `self.error_message` so callers
+        can decide how to surface problems to the user.
+        """
         self.reset_error()
-        response = requests.Response()  # get rid of pylint warning
+        response = None
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
-            json_data = response.json()
-            if key != "":
-                return json_data[key]
+            try:
+                json_data = response.json()
+            except ValueError:
+                # Invalid JSON body
+                self.status_code = response.status_code if response is not None else 0
+                self.error_message = "Invalid JSON response"
+                return {}
+
+            if key:
+                return json_data.get(key, {})
+            return json_data
+
+        except RequestException as exc:
+            # Network-level error or non-2xx status
+            if response is not None:
+                # try to extract a message from the response body, fall back to exception text
+                try:
+                    err = response.json()
+                    self.error_message = err.get("message", str(exc))
+                except Exception:
+                    self.error_message = str(exc)
+                self.status_code = response.status_code
             else:
-                return json_data
-        except:
-            error_json = json.loads(response.text)
-            self.error_message = error_json["message"]
-            return json.loads("{}")
+                self.status_code = 0
+                self.error_message = str(exc)
+
+            return {}
 
     def get_weather_stations(self):
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
