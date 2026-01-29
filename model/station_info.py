@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from model.weather_station import ok_to_add_station
+from .helpers import ok_to_add_station
 from utils.utils import Utils
 from utils.weather_utils import WeatherUtils
 
