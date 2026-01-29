@@ -14,13 +14,20 @@ class AppController:
     def __init__(self, service: WeatherService | None = None, model: DataModel | None = None) -> None:
         self.service = service or WeatherService()
         self.model = model or DataModel()
+        self.last_error = ""
 
     def fetch_and_load_station_list(self) -> bool:
         stations_json = self.service.get_station_list()
+        if self.service.has_error:
+            self.last_error = self.service.error_message
+            return False
         return self.model.parse_station_list(stations_json)
 
     def fetch_and_load_station_data(self, station_id: str) -> bool:
         station_json = self.service.get_road_weather(station_id)
+        if self.service.has_error:
+            self.last_error = self.service.error_message
+            return False
         return self.model.parse_station_data(station_json)
 
     def set_current_station(self, station_id: str) -> None:
