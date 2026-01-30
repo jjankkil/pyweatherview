@@ -1,14 +1,38 @@
 import ctypes
-import datetime
 import json
-import os
 from datetime import datetime
+import os
 
+import requests
 from dateutil import tz
+
+from definitions import Urls
 
 
 class Utils:
 
+    # todo: move to view
+    @staticmethod
+    def get_station_city(formatted_station_name) -> str:
+        if formatted_station_name != None:
+            if formatted_station_name.find(",") > -1:
+                city = formatted_station_name.split(",")[0]
+                return city
+
+        return ""
+
+    @staticmethod
+    def timestamp_to_datetime(
+        timestamp_str: str, is_local_time: bool = False
+    ) -> datetime:
+        if is_local_time:
+            return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=tz.tzlocal()
+            )
+        return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=tz.tzutc()
+        )
+    
     @staticmethod
     def set_taskbar_icon():
         try:

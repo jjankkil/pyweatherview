@@ -1,3 +1,7 @@
+# from enum import Enum
+import enum
+
+
 class Constants:
     SETTINGS_FILE_NAME = "settings.json"
     FORECAST_CNT = 3
@@ -8,6 +12,13 @@ class Constants:
     DEFAULT_POLLING_INTERVAL_S = (
         60  # if we can't determine the update interval, poll every 60s
     )
+    INVALID_VALUE = -999.0
+    MISSING_UNIT = ["///", "???"]
+
+
+class ConversionType(enum.Enum):
+    TO_INT = 1
+    TO_FLOAT = 2
 
 
 class Formats:
