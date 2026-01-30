@@ -5,6 +5,11 @@ from dateutil import tz
 
 
 def get_station_city(formatted_station_name) -> str:
+    """Extract the city name from a formatted station name.
+
+    Example: "Espoo, Nupuri vt1" -> "Espoo". Returns an empty string when
+    the input is None or does not contain a comma.
+    """
     if formatted_station_name is not None:
         if formatted_station_name.find(",") > -1:
             city = formatted_station_name.split(",")[0]
@@ -14,6 +19,10 @@ def get_station_city(formatted_station_name) -> str:
 
 
 def set_taskbar_icon():
+    """Set a Windows taskbar AppUserModelID for better icon grouping.
+
+    This function is a best-effort no-op on non-Windows systems.
+    """
     try:
         myappid = "63BD6F81-EFE4-444F-8F9F-186984210EA9"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
@@ -23,6 +32,10 @@ def set_taskbar_icon():
 
 
 def get_weather_symbol(weather_id):
+    """Map an OpenWeatherMap `weather_id` to a Unicode symbol.
+
+    Returns an empty string when the id is unknown.
+    """
     # same mapping as original utils/weather_utils
     if 200 <= weather_id <= 232:
         return "⛈"
@@ -49,6 +62,10 @@ def get_weather_symbol(weather_id):
 
 
 def wind_direction_as_text(degrees):
+    """Return a Finnish textual wind direction for `degrees`.
+
+    Returns an empty string when `degrees` is None.
+    """
     if degrees is None:
         return ""
 
@@ -74,6 +91,11 @@ def wind_direction_as_text(degrees):
 
 
 def format_station_name(raw_name: str) -> str:
+    """Format raw station names into a human readable string.
+
+    Input tokens are expected to be underscore-separated; output attempts to
+    produce `City, Area Road <suffix>` style strings depending on tokens.
+    """
     if raw_name is None or raw_name == "":
         return ""
 

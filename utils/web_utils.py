@@ -6,6 +6,11 @@ from definitions import Urls
 
 class RequestRunner:
     def __init__(self):
+        """Create a RequestRunner and initialize error state.
+
+        This object provides safe GET requests with JSON parsing and error
+        extraction helpers used across the application.
+        """
         self.reset_error()
 
     def reset_error(self):
@@ -15,6 +20,11 @@ class RequestRunner:
 
     @property
     def has_error(self) -> bool:
+        """True when the last executed request ended in an error.
+
+        An error is signaled either by a non-200 HTTP status or a non-empty
+        `error_message` parsed from the response or exception.
+        """
         return self.status_code != 200 or self.error_message != ""
 
     def __execute(self, url: str, key: str = ""):
@@ -27,6 +37,7 @@ class RequestRunner:
         response = None
         try:
             response = requests.get(url, timeout=10)
+            # raise HTTPError on 4xx/5xx
             response.raise_for_status()
             try:
                 json_data = response.json()
@@ -60,11 +71,16 @@ class RequestRunner:
         """Get a list containing all weather stations from from Liikennevirasto Open Data API.
         Returns a JSON array of stations, or empty JSON on error."""
 
+        """Fetch the list of weather stations and return the `features` array.
+
+        Returns an empty structure on error and sets `status_code`/`error_message`.
+        """
         return self.__execute(Urls.STATION_LIST_URL, "features")
 
     def get_road_weather(self, road_station_id):
         """Get weather data from Liikennevirasto Open Data API"""
 
+        """Fetch detailed road weather JSON for the `road_station_id`."""
         url = Urls.WEATHER_STATION_URL.format(road_station_id)
         return self.__execute(url)
 
@@ -88,6 +104,7 @@ class RequestRunner:
     def get_forecast(self, coordinates, api_key: str):
         """Get weather forecast from Open Weathermap API"""
 
+        """Fetch forecast JSON for `coordinates` using OpenWeatherMap."""
         url = Urls.OPENWEATHERMAP_FORERCAST_URL.format(
             coordinates.latitude,
             coordinates.longitude,
