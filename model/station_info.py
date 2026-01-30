@@ -37,6 +37,11 @@ class WeatherStationInfo:
         self._properties = WeatherStationInfo.Properties()
 
     def parse(self, station_json) -> bool:
+        """Parse a single station JSON object into this `WeatherStationInfo`.
+
+        The expected input follows the Digitraffic station schema (geometry + properties).
+        Returns True on success, False on failure.
+        """
         self._coordinates._lat = station_json["geometry"]["coordinates"][1]
         self._coordinates._lon = station_json["geometry"]["coordinates"][0]
         self._coordinates._alt = station_json["geometry"]["coordinates"][2]
@@ -52,14 +57,17 @@ class WeatherStationInfo:
 
     @property
     def id(self) -> int:
+        """Station identifier as an integer parsed from source JSON."""
         return self._properties._id
 
     @property
     def name(self) -> str:
+        """Raw station name string (as provided by the station metadata)."""
         return self._properties._name
 
     @property
     def formatted_name(self) -> str:
+        """Return a human-friendly formatted station name (cached)."""
         if self._formatted_name == "":
             self._formatted_name = WeatherUtils.format_station_name(
                 self._properties._name

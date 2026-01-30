@@ -17,12 +17,23 @@ class Utils:
     # UI helpers are now in view.ui_helpers; keep shims for backwards compatibility
     @staticmethod
     def get_station_city(formatted_station_name) -> str:
+        """Return the city portion of a formatted station name.
+
+        E.g. "Espoo, Nupuri vt1" -> "Espoo". Returns empty string when
+        input is None or does not contain a comma.
+        """
         return _get_station_city(formatted_station_name)
 
     @staticmethod
     def timestamp_to_datetime(
         timestamp_str: str, is_local_time: bool = False
     ) -> datetime:
+        """Convert an ISO UTC timestamp to a timezone-aware `datetime`.
+
+        `timestamp_str` must be in the format "%Y-%m-%dT%H:%M:%SZ". When
+        `is_local_time` is True the returned datetime uses the local tzinfo,
+        otherwise UTC tzinfo is applied.
+        """
         if is_local_time:
             return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%SZ").replace(
                 tzinfo=tz.tzlocal()
@@ -33,7 +44,11 @@ class Utils:
     
     @staticmethod
     def set_taskbar_icon():
-        # forward to view helper
+        """Attempt to set a Windows taskbar app id for nicer icon grouping.
+
+        This is a best-effort helper that silently ignores failures on
+        non-Windows platforms.
+        """
         try:
             _set_taskbar_icon()
         except Exception:
@@ -41,6 +56,11 @@ class Utils:
 
     @staticmethod
     def load_settings(file_name) -> dict:
+        """Load settings JSON from `file_name` and return a settings dict.
+
+        If the file is missing an empty defaults dictionary is returned and
+        the function ensures expected keys exist.
+        """
         file_path = os.path.join(file_name)
         settings = json.loads("{}")
 
@@ -62,6 +82,11 @@ class Utils:
 
     @staticmethod
     def save_settings(file_name, settings_json):
+        """Persist `settings_json` to `file_name` as JSON.
+
+        Failures are currently printed to stdout; callers may wrap this call
+        to provide stronger error handling if required.
+        """
         filename = os.path.join(file_name)
         try:
             with open(filename, mode="w") as f:
@@ -73,7 +98,12 @@ class Utils:
     def calculate_seconds_until_next_update(
         latest_observation_time_ts, previous_observation_time_ts
     ) -> int:
-        # all timestamps are UTC
+        """Calculate how many seconds to wait until next poll based on
+        the latest and previous observation timestamps.
+
+        Values are UTC timestamps. The returned value is saturated to
+        [0, 600] seconds.
+        """
         now_ts = datetime.now(tz.tzutc()).timestamp()
         if latest_observation_time_ts != previous_observation_time_ts:
             station_update_interval_s = (

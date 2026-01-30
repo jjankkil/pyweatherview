@@ -16,7 +16,16 @@ class NetworkWorker(QThread):
         self.station_id = station_id
         self.api_key = api_key
 
+    def __repr__(self) -> str:
+        """Return a short repr useful in logs when debugging worker instances."""
+        return f"NetworkWorker(station_id={self.station_id})"
+
     def run(self) -> None:
+        """Run the network sequence on the worker thread.
+
+        The method fetches station data via the controller and then requests
+        city weather and forecast; on completion it emits `finished(city, forecast, error)`.
+        """
         try:
             # Fetch and parse road weather into the model
             success = self.controller.fetch_and_load_station_data(self.station_id)

@@ -92,6 +92,11 @@ class WeatherStation:
         self.sensor_values = [Sensor()]
 
     def parse(self, weather_data) -> bool:
+        """Parse weather observation JSON into this `WeatherStation`.
+
+        Updates observation timestamps and fills `sensor_values` from the
+        `sensorValues` array. Returns True on successful parse.
+        """
         # update 'data updated' times
         observation_time = Utils.timestamp_to_datetime(
             weather_data["dataUpdatedTime"]
@@ -118,14 +123,17 @@ class WeatherStation:
 
     @property
     def id(self):
+        """Return station id inherited from the associated `WeatherStationInfo`."""
         return self._station_info.id
 
     @property
     def formatted_name(self) -> str:
+        """Return the formatted name of the station for UI display."""
         return self._station_info.formatted_name
 
     @property
     def coordinates(self):
+        """Return the `Coordinates` object (lat/lon/alt) for the station."""
         return self._station_info.coordinates
 
     @property
