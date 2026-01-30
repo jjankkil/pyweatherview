@@ -101,16 +101,20 @@ class WeatherStation:
         observation_time = Utils.timestamp_to_datetime(
             weather_data["dataUpdatedTime"]
         )
-        if (
-            observation_time
-            != self._data_updated_time[WeatherStation.ObservationTimeIdx.PREVIOUS.value]
-        ):
-            self._data_updated_time[
-                WeatherStation.ObservationTimeIdx.PREVIOUS.value
-            ] = self._data_updated_time[WeatherStation.ObservationTimeIdx.LATEST.value]
-            self._data_updated_time[WeatherStation.ObservationTimeIdx.LATEST.value] = (
-                observation_time
-            )
+
+        # If this WeatherStation instance has no meaningful previous
+        # observation (both timestamps equal, e.g. just constructed), set
+        # both latest and previous to the incoming observation time. This
+        # prevents creating a negative update interval when a new station
+        # is selected and the instance was initialized with `now`.
+        prev_idx = WeatherStation.ObservationTimeIdx.PREVIOUS.value
+        latest_idx = WeatherStation.ObservationTimeIdx.LATEST.value
+        if self._data_updated_time[prev_idx] == self._data_updated_time[latest_idx]:
+            self._data_updated_time[prev_idx] = observation_time
+            self._data_updated_time[latest_idx] = observation_time
+        elif observation_time != self._data_updated_time[prev_idx]:
+            self._data_updated_time[prev_idx] = self._data_updated_time[latest_idx]
+            self._data_updated_time[latest_idx] = observation_time
 
         # get sensor values
         self.sensor_values.clear()
