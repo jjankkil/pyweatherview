@@ -19,6 +19,7 @@ In order to run the application, Python packages PyQt6, requests and python-date
 
 #### Improvement ideas
 
+- The whole application should to be refactored to better follow good SW design principles.
 - Displayed data should be localized, e.g. "tuntuu kuin" --> "feels like".
 - Night time weather symbols should be added.
 - Weather symbols could be implemented using some other technique that Segoe UI emoji font.
