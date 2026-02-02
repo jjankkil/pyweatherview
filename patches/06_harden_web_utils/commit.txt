@@ -1,7 +1,0 @@
-Commit: 06_harden_web_utils
-Message: Harden RequestRunner error handling and JSON parsing
-
-Files:
-- utils/web_utils.py (modified)
-
-Purpose: reliable error_message/status_code and safe JSON handling.

@@ -1,9 +1,0 @@
-Commit: 01_add_weather_service
-Message: Add WeatherService wrapper to encapsulate network requests
-
-Files:
-- controller/weather_service.py (new)
-- controller/__init__.py (new)
-
-Purpose: Provide a thin service wrapper around RequestRunner so UI and controller
-code imports a stable interface instead of directly using the low-level utils.

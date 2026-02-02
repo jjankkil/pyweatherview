@@ -1,9 +1,0 @@
-Commit: 09_misc
-Message: Add smoke test script, branch/commit helper, and CHANGELOG
-
-Files:
-- scripts/smoke_test.py (new)
-- scripts/create_branch_and_commit.ps1 (new)
-- CHANGELOG.md (new)
-
-Purpose: provide automated checks and commit helper plus changelog summary.

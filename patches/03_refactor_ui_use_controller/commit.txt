@@ -1,7 +1,0 @@
-Commit: 03_refactor_ui_use_controller
-Message: Refactor UI to use AppController and WeatherService
-
-Files modified:
-- pyweatherview.py (edited)
-
-Purpose: Replace direct `RequestRunner` use in UI with `AppController` orchestration.

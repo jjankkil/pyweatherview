@@ -1,9 +1,0 @@
-Commit: 05_model_helpers
-Message: Move ok_to_add_station into `model/helpers.py` and update imports
-
-Files:
-- model/helpers.py (new)
-- model/weather_station.py (modified)
-- model/station_info.py (modified)
-
-Purpose: centralize station filtering in the model layer.
